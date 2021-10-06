@@ -7,7 +7,7 @@ xFit = linspace(log10(4),log10(50),50);
     figure
 
 for ii = 2:length(varNames)
-    subplot(4,3,ii);
+    subplot(4,3,ii-1);
     x = log10(T.PSI);
     y = T.(varNames{ii});
     goodPoints = ~isnan(y);
