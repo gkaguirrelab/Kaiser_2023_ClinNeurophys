@@ -1,0 +1,17 @@
+[
+	{
+	"flavor": "",
+	"hook": "",
+	"importance": "",
+	"localHookTemplate": "",
+	"printLocalHookOutput": "1",
+	"name": "blinkCNSAnalysis",
+	"pathPlacement": "append",
+	"subfolder": "code",
+	"toolboxRoot": "",
+	"type": "git",
+	"update": "",
+	"url": "https://github.com/gkaguirrelab/blinkCNSAnalysis.git"
+	}
+]
+
