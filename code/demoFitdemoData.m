@@ -1,12 +1,12 @@
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-fileName = 'gkaDemoBlinkCNSData.csv';
-fileName = 'p100.csv';
+
+fileName = 'p99.csv';
 
 T = readtable(fullfile(dataPath,'data',fileName));
 varNames = T.Properties.VariableNames;
 
 xFit = linspace(log10(4),log10(50),50);
-    figure
+    figure('Name',fileName);
 
 for ii = 2:length(varNames)
     subplot(5,3,ii-1);
