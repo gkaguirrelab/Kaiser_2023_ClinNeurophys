@@ -1,6 +1,6 @@
 dataPath = fileparts(fileparts(mfilename('fullpath')));
 fileName = 'gkaDemoBlinkCNSData.csv';
-%fileName = 'p97.csv';
+fileName = 'p100.csv';
 
 T = readtable(fullfile(dataPath,'data',fileName));
 varNames = T.Properties.VariableNames;
