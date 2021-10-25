@@ -144,7 +144,7 @@ if isempty(U)
 end
 
 %-----------------------------Fit the data---------------------------------
-fo = fitoptions('method','NonlinearLeastSquares','Lower',L,'Upper',U);
+fo = fitoptions('method','NonlinearLeastSquares','Lower',L,'Upper',U, 'Robust', 'LAR', 'MaxIter', 1000, 'MaxFunEvals', 1000);
 set(fo,'Startpoint',st);
 if all(we) % if y was a matrix use std as weights for fitting
     set(fo,'Weights',we);

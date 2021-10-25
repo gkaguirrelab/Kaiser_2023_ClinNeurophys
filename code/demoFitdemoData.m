@@ -1,34 +1,42 @@
 dataPath = fileparts(fileparts(mfilename('fullpath')));
 
-fileName = 'p99.csv';
+subList = {'p96.csv','p97.csv','p99.csv','p100.csv'};
 
-T = readtable(fullfile(dataPath,'data',fileName));
-varNames = T.Properties.VariableNames;
+varNamesToPlot = {'latency','auc'};
 
-xFit = linspace(log10(4),log10(50),50);
-    figure('Name',fileName);
+xFit = linspace(log10(3),log10(70),50);
 
-for ii = 2:length(varNames)
-    subplot(5,3,ii-1);
-    x = log10(T.PSI);
-    y = T.(varNames{ii});
-    switch varNames{ii}
-        case 'latency'
-            y = 100-y;
-            titleStr = '100-latency';
-        otherwise
-            titleStr = varNames{ii};
+figure();
+
+idx = 1;
+for ss = 1:length(subList)
+    T = readtable(fullfile(dataPath,'data',subList{ss}));
+    allVarNames = T.Properties.VariableNames;
+    
+    for vv = 1:length(varNamesToPlot)
+        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+        
+        y = T.(varNames{ii});
+        goodPoints = ~isnan(y);
+        x = log10(T.PSI);
+        x = x(goodPoints);
+        y = y(goodPoints);
+        [x,idxX]=sort(x);
+        y = y(idxX);
+        
+        subplot(length(subList),length(varNamesToPlot),idx);
+        idx = idx+1;
+        
+        plot(x,y,'ok');
+        [fitObj,G] = L3P(x,y);
+        hold on
+        plot(xFit,fitObj(xFit),'-r')
+        xlim(log10([2 100]));
+        rsquare = G.rsquare;
+        if rsquare > 1 || rsquare < 0
+            rsquare = nan;
+        end
+        title([varNamesToPlot{vv} ' - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
+        xlabel('puff pressure [log psi]')
     end
-    goodPoints = ~isnan(y);
-    x = x(goodPoints);
-    y = y(goodPoints);
-    [x,idxX]=sort(x);
-    y = y(idxX);
-    plot(x,y,'ok');
-    [fitObj,G] = L3P(x,y);
-    hold on
-    plot(xFit,fitObj(xFit),'-r')
-    xlim(log10([2 70]));
-    title([titleStr sprintf(' R^2=%2.2f',G.rsquare)])
-    xlabel('puff pressure [log psi]')
 end
