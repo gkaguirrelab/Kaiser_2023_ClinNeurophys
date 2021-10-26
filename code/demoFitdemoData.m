@@ -5,10 +5,11 @@ subList = {'p96.csv','p97.csv','p99.csv','p100.csv'};
 varNamesToPlot = {'latency','auc'};
 
 xFit = linspace(log10(3),log10(70),50);
+ylims = {[30 80],[0 5e4]};
 
 figure();
 
-idx = 1;
+
 for ss = 1:length(subList)
     T = readtable(fullfile(dataPath,'data',subList{ss}));
     allVarNames = T.Properties.VariableNames;
@@ -24,10 +25,10 @@ for ss = 1:length(subList)
         [x,idxX]=sort(x);
         y = y(idxX);
         
-        subplot(length(subList),length(varNamesToPlot),idx);
-        idx = idx+1;
+        subplot(length(varNamesToPlot),length(subList),ss+(vv-1)*length(subList));
+
         
-        plot(x,y,'ok');
+        plot(x,y,'ob');
         [fitObj,G] = L3P(x,y);
         hold on
         plot(xFit,fitObj(xFit),'-r')
@@ -38,5 +39,6 @@ for ss = 1:length(subList)
         end
         title([varNamesToPlot{vv} ' - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
+        ylim(ylims{vv});
     end
 end
