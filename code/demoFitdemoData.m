@@ -16,7 +16,7 @@ for ss = 1:length(subList)
     for vv = 1:length(varNamesToPlot)
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
         
-        y = T.(varNames{ii});
+        y = T.(allVarNames{ii});
         goodPoints = ~isnan(y);
         x = log10(T.PSI);
         x = x(goodPoints);
