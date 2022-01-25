@@ -11,7 +11,7 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='1_2022.csv';
 
 % choose subject and parameters
-subList = {'15514'};
+subList = {15514};
 varNamesToPlot = {'latency','auc'};
 
 xFit = linspace(log10(3),log10(70),50);
@@ -24,9 +24,17 @@ T = readtable(fullfile(dataPath,'data',spreadsheet));
 allVarNames = T.Properties.VariableNames;
 
 for ss = 1:length(subList)
-    % TODO: find scans for desired subject and separate them into a table for
-    % each of the two sessions
+    % find scans for desired subject
+    scans = T(ismember(T.subjectID,subList{ss}),:);
     
+    % separate scans into a table for each of the sessions
+    dates = unique(scans.scanDate);
+    sessionTables = ;
+    for dd = 1:length(dates)
+        sessionTables(end+1) = scans(ismember(scans.scanDate,dates{dd}),:);
+    end
+    
+    % plot within session data and calculate R^2
     for tt = 1:length(sessionTables)
         for vv = 1:length(varNamesToPlot)
             ii = find(strcmp(varNamesToPlot{vv},allVarNames));
