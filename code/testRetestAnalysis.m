@@ -26,6 +26,7 @@ allVarNames = T.Properties.VariableNames;
 for ss = 1:length(subList)
     % find scans for desired subject
     scans = T(ismember(T.subjectID,subList{ss}),:);
+    scans = scans(ismember(scans.valid,'TRUE'),:);
     
     % separate scans into a table for each of the sessions
     dates = unique(scans.scanDate);
@@ -46,7 +47,7 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),length(subList),ss+(vv-1)*length(subList));
+        subplot(length(varNamesToPlot),2*length(subList),(2*(vv-1)+1)*ss);
         plot(x,y,'ob');
         [fitObj,G] = L3P(x,y);
         hold on
@@ -56,7 +57,7 @@ for ss = 1:length(subList)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
+        title([varNamesToPlot{vv} ' - session 1 - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
         ylim(ylims{vv});
     end
@@ -75,7 +76,7 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),length(subList),ss+(vv-1)*length(subList));
+        subplot(length(varNamesToPlot),2*length(subList),ss*vv*2);
         plot(x,y,'ob');
         [fitObj,G] = L3P(x,y);
         hold on
@@ -85,7 +86,7 @@ for ss = 1:length(subList)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
+        title([varNamesToPlot{vv} ' - session 2 - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
         ylim(ylims{vv});
     end
