@@ -27,6 +27,7 @@ for ss = 1:length(subList)
     % TODO: find scans for desired subject and separate them into a table for
     % each of the two sessions
     
+    % plot within session data and calculate R^2
     for tt = 1:length(sessionTables)
         for vv = 1:length(varNamesToPlot)
             ii = find(strcmp(varNamesToPlot{vv},allVarNames));
