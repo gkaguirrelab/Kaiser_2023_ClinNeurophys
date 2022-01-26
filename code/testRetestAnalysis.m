@@ -11,7 +11,7 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='1_2022.csv';
 
 % choose subject and parameters
-subList = {15514};
+subList = {15512};
 varNamesToPlot = {'latency','auc'};
 
 xFit = linspace(log10(3),log10(70),50);
@@ -57,7 +57,7 @@ for ss = 1:length(subList)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - session 1 - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
+        title([varNamesToPlot{vv} ' - session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
         ylim(ylims{vv});
     end
@@ -86,7 +86,7 @@ for ss = 1:length(subList)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - session 2 - ' subList{ss} sprintf(' R^2=%2.2f',rsquare)])
+        title([varNamesToPlot{vv} ' - session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
         ylim(ylims{vv});
     end
