@@ -11,11 +11,11 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='2_2022.csv';
 
 % choose subject and parameters
-subList = {14596, 14595, 14593, 14592};
-varNamesToPlot = {'maxClosingVelocityI'};
+subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
+varNamesToPlot = {'aucI'};
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[0 25],[0 50]};
+ylims = {[0 5e4]};
 
 figure();
 
@@ -51,13 +51,13 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),2*length(subList),plotNum);
+        subplot(2,length(subList),plotNum);
         plot(x,y,'ob');
-        [fitObj,G] = L3P(x,y);
+        fitObj = fitlm(x,y);
         hold on
-        plot(xFit,fitObj(xFit),'-r')
+        plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        rsquare = G.rsquare;
+        rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
@@ -68,7 +68,6 @@ for ss = 1:length(subList)
         
     % plot session two data
     for vv = 1:length(varNamesToPlot)
-        plotNum = plotNum + 1;
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % throw out bad scans
@@ -81,13 +80,13 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),2*length(subList),plotNum);
+        subplot(2,length(subList),plotNum + length(subList));
         plot(x,y,'ob');
-        [fitObj,G] = L3P(x,y);
+        fitObj = fitlm(x,y);
         hold on
-        plot(xFit,fitObj(xFit),'-r')
+        plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        rsquare = G.rsquare;
+        rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
@@ -97,4 +96,6 @@ for ss = 1:length(subList)
     end
     
     % TODO: calculate and show between session correlation
+    
+    % TODO: make average across subject plots
 end
