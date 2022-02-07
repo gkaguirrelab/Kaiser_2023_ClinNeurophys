@@ -125,6 +125,6 @@ for vv = 1:length(varNamesToPlot)
     end
     title([varNamesToPlot{vv} ' offset - ' sprintf(' R^2=%2.2f',rsquare)])
     xlabel([varNamesToPlot{vv} ' offset session 1'])
-    ylabel([varNamesToPlot{vv} ' offset session 2'])
+    ylabel(varNamesToPlot{vv} ' offset session 2')
     
 end
