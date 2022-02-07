@@ -8,14 +8,14 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='1_2022.csv';
+spreadsheet ='2_2022.csv';
 
 % choose subject and parameters
-subList = {15512};
-varNamesToPlot = {'latency','auc'};
+subList = {14596, 14595, 14593, 14592};
+varNamesToPlot = {'maxClosingVelocityI'};
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[30 80],[0 5e4]};
+ylims = {[0 25],[0 50]};
 
 figure();
 
@@ -23,7 +23,10 @@ figure();
 T = readtable(fullfile(dataPath,'data',spreadsheet));
 allVarNames = T.Properties.VariableNames;
 
+plotNum = 0;
+
 for ss = 1:length(subList)
+    
     % find scans for desired subject
     scans = T(ismember(T.subjectID,subList{ss}),:);
     scans = scans(ismember(scans.valid,'TRUE'),:);
@@ -35,6 +38,7 @@ for ss = 1:length(subList)
     
     % plot session one data
     for vv = 1:length(varNamesToPlot)
+        plotNum = plotNum + 1;
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % throw out bad scans
@@ -47,7 +51,7 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),2*length(subList),(2*(vv-1)+1)*ss);
+        subplot(length(varNamesToPlot),2*length(subList),plotNum);
         plot(x,y,'ob');
         [fitObj,G] = L3P(x,y);
         hold on
@@ -64,6 +68,7 @@ for ss = 1:length(subList)
         
     % plot session two data
     for vv = 1:length(varNamesToPlot)
+        plotNum = plotNum + 1;
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % throw out bad scans
@@ -76,7 +81,7 @@ for ss = 1:length(subList)
         y = y(idxX);
 
         % make plot
-        subplot(length(varNamesToPlot),2*length(subList),ss*vv*2);
+        subplot(length(varNamesToPlot),2*length(subList),plotNum);
         plot(x,y,'ob');
         [fitObj,G] = L3P(x,y);
         hold on
