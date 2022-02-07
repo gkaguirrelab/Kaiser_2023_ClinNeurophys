@@ -12,10 +12,10 @@ spreadsheet ='2_2022.csv';
 
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
-varNamesToPlot = {'aucI'};
+varNamesToPlot = {'openTimeI'};
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[0 5e4]};
+ylims = {[50 400]};
 
 figure();
 
@@ -53,7 +53,7 @@ for ss = 1:length(subList)
         % make plot
         subplot(2,length(subList),plotNum);
         plot(x,y,'ob');
-        fitObj = fitlm(x,y);
+        fitObj = fitlm(x,y,'RobustOpts', 'on');
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
@@ -82,7 +82,7 @@ for ss = 1:length(subList)
         % make plot
         subplot(2,length(subList),plotNum + length(subList));
         plot(x,y,'ob');
-        fitObj = fitlm(x,y);
+        fitObj = fitlm(x,y,'RobustOpts', 'on');
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
