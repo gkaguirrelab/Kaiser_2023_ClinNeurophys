@@ -61,8 +61,8 @@ for vv = 1:length(varNamesToPlot)
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        pX(end+1) = fitObj.Coefficients.Estimate(1);
-        oX(end+1) = fitObj.Coefficients.Estimate(2);
+        pX(end+1) = fitObj.Coefficients.Estimate(2);
+        oX(end+1) = fitObj.Coefficients.Estimate(1);
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
@@ -87,8 +87,8 @@ for vv = 1:length(varNamesToPlot)
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        pY(end+1) = fitObj.Coefficients.Estimate(1);
-        oY(end+1) = fitObj.Coefficients.Estimate(2);
+        pY(end+1) = fitObj.Coefficients.Estimate(2);
+        oY(end+1) = fitObj.Coefficients.Estimate(1);
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
