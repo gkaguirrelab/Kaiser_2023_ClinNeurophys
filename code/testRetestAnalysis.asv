@@ -26,6 +26,7 @@ allVarNames = T.Properties.VariableNames;
 for vv = 1:length(varNamesToPlot)
     
     figure();
+    mSize = 6;
     plotNum = 0;
     pX = [];
     pY = [];
@@ -53,16 +54,18 @@ for vv = 1:length(varNamesToPlot)
         y = y(goodPoints);
         [x,idxX]=sort(x);
         y = y(idxX);
+        weights = sessOne.numIpsi;
 
         % make plot
         subplot(2,length(subList),plotNum);
-        plot(x,y,'ob');
-        fitObj = fitlm(x,y,'RobustOpts', 'on');
+        sop = plot(x,y,'ob');
+        
+        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        pX(end+1) = fitObj.Coefficients.Estimate(1);
-        oX(end+1) = fitObj.Coefficients.Estimate(2);
+        pX(end+1) = fitObj.Coefficients.Estimate(2);
+        oX(end+1) = fitObj.Coefficients.Estimate(1);
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
@@ -79,16 +82,17 @@ for vv = 1:length(varNamesToPlot)
         y = y(goodPoints);
         [x,idxX]=sort(x);
         y = y(idxX);
+        weights = sessTwo.numIpsi;
 
         % make plot
         subplot(2,length(subList),plotNum + length(subList));
         plot(x,y,'ob');
-        fitObj = fitlm(x,y,'RobustOpts', 'on');
+        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
-        pY(end+1) = fitObj.Coefficients.Estimate(1);
-        oY(end+1) = fitObj.Coefficients.Estimate(2);
+        pY(end+1) = fitObj.Coefficients.Estimate(2);
+        oY(end+1) = fitObj.Coefficients.Estimate(1);
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
@@ -125,6 +129,6 @@ for vv = 1:length(varNamesToPlot)
     end
     title([varNamesToPlot{vv} ' offset - ' sprintf(' R^2=%2.2f',rsquare)])
     xlabel([varNamesToPlot{vv} ' offset session 1'])
-    ylabel(varNamesToPlot{vv} ' offset session 2')
+    ylabel([varNamesToPlot{vv} ' offset session 2'])
     
 end

@@ -53,11 +53,13 @@ for vv = 1:length(varNamesToPlot)
         y = y(goodPoints);
         [x,idxX]=sort(x);
         y = y(idxX);
+        weights = sessOne.numIpsi;
+        mSize = weights*20;
 
         % make plot
         subplot(2,length(subList),plotNum);
-        plot(x,y,'ob');
-        fitObj = fitlm(x,y,'RobustOpts', 'on');
+        scatter(x,y,mSize);
+        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
@@ -79,11 +81,13 @@ for vv = 1:length(varNamesToPlot)
         y = y(goodPoints);
         [x,idxX]=sort(x);
         y = y(idxX);
+        weights = sessTwo.numIpsi;
+        mSize = weights*20;
 
         % make plot
         subplot(2,length(subList),plotNum + length(subList));
-        plot(x,y,'ob');
-        fitObj = fitlm(x,y,'RobustOpts', 'on');
+        scatter(x,y,mSize);
+        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
         xlim(log10([2 100]));
