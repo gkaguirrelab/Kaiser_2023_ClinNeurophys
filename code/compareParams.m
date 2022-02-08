@@ -47,3 +47,17 @@ for vv = 1:length(varNamesToPlot)
 end
 
 comp = corr(slopes);
+
+% Perform a PCA analysis after standardizing the slope measures
+X = (slopes-mean(slopes))./std(slopes);
+[coeff,score,latent,tsquared,explained,mu] = pca(X);
+figure
+plot(explained)
+xlabel('component'); ylabel('percent variance explained');
+figure
+biplot(coeff(:,1:2),'scores',score(:,1:2),'varLabels',varNamesToPlot)
+axis equal
+figure
+scatter3(score(:,1),score(:,2),score(:,3),'or')
+axis equal
+xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
