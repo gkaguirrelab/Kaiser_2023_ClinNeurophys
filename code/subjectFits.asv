@@ -1,9 +1,8 @@
-%% testRetestAnalysis
+%% subjectFits
 % This script loads a blink data set into a MATLAB table variable. When
-% run, it will aggregate data for a given subject and parameter(s), split
-% by session. It will then produce a plot which describes the within session
-% correlation for each session and will calculate the test retest reliability
-% between sessions.
+% run, it will aggregate data for a given subject and parameter(s) across
+% sessions. It will then produce a plot which describes the across session
+% trend and will calculate the correlation of the slope across subjects.
 %%
 
 % load file path
@@ -12,10 +11,10 @@ spreadsheet ='2_2022.csv';
 
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
-varNamesToPlot = {'auc', 'latencyI', 'timeUnderI', 'openTimeI'};
+varNamesToPlot = {'initVelocityI', 'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[0 5e4], [30 80], [0 400], [50 400]};
+%ylims = {[0 5e4], [30 80], [0 400], [50 400]};
 
 figure();
 
@@ -26,7 +25,6 @@ allVarNames = T.Properties.VariableNames;
 for vv = 1:length(varNamesToPlot)
     
     figure();
-    mSize = 6;
     plotNum = 0;
     pX = [];
     pY = [];
@@ -39,10 +37,6 @@ for vv = 1:length(varNamesToPlot)
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
 
-        % separate scans into a table for each of the sessions
-        dates = unique(scans.scanDate);
-        sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
-        sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % session one data
@@ -55,11 +49,11 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         weights = sessOne.numIpsi;
+        mSize = weights*20;
 
         % make plot
         subplot(2,length(subList),plotNum);
-        sop = plot(x,y,'ob');
-        
+        scatter(x,y,mSize);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
@@ -72,7 +66,7 @@ for vv = 1:length(varNamesToPlot)
         end
         title([varNamesToPlot{vv} ' - session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        % ylim(ylims{vv});
 
         % session two data
         y = sessTwo.(allVarNames{ii});
@@ -83,10 +77,11 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         weights = sessTwo.numIpsi;
+        mSize = weights*20;
 
         % make plot
         subplot(2,length(subList),plotNum + length(subList));
-        plot(x,y,'ob');
+        scatter(x,y,mSize);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r')
@@ -99,7 +94,7 @@ for vv = 1:length(varNamesToPlot)
         end
         title([varNamesToPlot{vv} ' - session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        % ylim(ylims{vv});
     end
     
     % plot parameter test retest values across subjects

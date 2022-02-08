@@ -12,12 +12,10 @@ spreadsheet ='2_2022.csv';
 
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
-varNamesToPlot = {'auc', 'latencyI', 'timeUnderI', 'openTimeI'};
+varNamesToPlot = {'initVelocityI', 'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[0 5e4], [30 80], [0 400], [50 400]};
-
-figure();
+%ylims = {[0 5e4], [30 80], [0 400], [50 400]};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -71,7 +69,7 @@ for vv = 1:length(varNamesToPlot)
         end
         title([varNamesToPlot{vv} ' - session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        % ylim(ylims{vv});
 
         % session two data
         y = sessTwo.(allVarNames{ii});
@@ -99,7 +97,7 @@ for vv = 1:length(varNamesToPlot)
         end
         title([varNamesToPlot{vv} ' - session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
         xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        % ylim(ylims{vv});
     end
     
     % plot parameter test retest values across subjects
