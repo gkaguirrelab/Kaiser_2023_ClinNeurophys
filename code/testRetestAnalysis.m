@@ -8,14 +8,14 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='2_2022.csv';
+spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
-varNamesToPlot = {'initVelocityI', 'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
+varNamesToPlot = {'latencyI'};
 
 xFit = linspace(log10(3),log10(70),50);
-%ylims = {[0 5e4], [30 80], [0 400], [50 400]};
+ylims = {[30 80]};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -67,9 +67,10 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
+        title(['Session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
+        ylabel([varNamesToPlot{vv}])
         xlabel('puff pressure [log psi]')
-        % ylim(ylims{vv});
+        ylim(ylims{vv});
 
         % session two data
         y = sessTwo.(allVarNames{ii});
@@ -95,14 +96,15 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title([varNamesToPlot{vv} ' - session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
+        title(['Session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
+        ylabel([varNamesToPlot{vv}])
         xlabel('puff pressure [log psi]')
-        % ylim(ylims{vv});
+        ylim(ylims{vv});
     end
     
     % plot parameter test retest values across subjects
     figure();
-    subplot(1,2,1);
+    pl = subplot(1,1,1);
     plot(pX,pY,'ob');
     fitObj = fitlm(pX,pY,'RobustOpts', 'on');
     hold on
@@ -114,19 +116,21 @@ for vv = 1:length(varNamesToPlot)
     title([varNamesToPlot{vv} ' parameter - ' sprintf(' R^2=%2.2f',rsquare)])
     xlabel([varNamesToPlot{vv} ' parameter session 1'])
     ylabel([varNamesToPlot{vv} ' parameter session 2'])
+    ylim([-28 -10]);
+    axis(pl, 'square');
     
-    % plot offset test retest values across subjects
-    subplot(1,2,2);
-    plot(oX,oY,'ob');
-    fitObj = fitlm(oX,oY,'RobustOpts', 'on');
-    hold on
-    plot(oX,fitObj.Fitted,'-r')
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
-    end
-    title([varNamesToPlot{vv} ' offset - ' sprintf(' R^2=%2.2f',rsquare)])
-    xlabel([varNamesToPlot{vv} ' offset session 1'])
-    ylabel([varNamesToPlot{vv} ' offset session 2'])
+%     % plot offset test retest values across subjects
+%     subplot(1,2,2);
+%     plot(oX,oY,'ob');
+%     fitObj = fitlm(oX,oY,'RobustOpts', 'on');
+%     hold on
+%     plot(oX,fitObj.Fitted,'-r')
+%     rsquare = fitObj.Rsquared.Ordinary;
+%     if rsquare > 1 || rsquare < 0
+%         rsquare = nan;
+%     end
+%     title([varNamesToPlot{vv} ' offset - ' sprintf(' R^2=%2.2f',rsquare)])
+%     xlabel([varNamesToPlot{vv} ' offset session 1'])
+%     ylabel([varNamesToPlot{vv} ' offset session 2'])
     
 end
