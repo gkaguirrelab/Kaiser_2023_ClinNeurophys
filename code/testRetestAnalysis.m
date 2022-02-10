@@ -14,11 +14,11 @@ spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 % run subjects 149590, 14589, and 14588 only for highest 3 PSI levels
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588};
-varNamesToPlot = {'latencyI'};
+varNamesToPlot = {'latencyI', 'aucI'};
 highestOnly = 'TRUE';
 
 xFit = linspace(log10(3),log10(70),50);
-ylims = {[30 80]};
+% ylims = {[30 80]};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -68,7 +68,7 @@ for vv = 1:length(varNamesToPlot)
         scatter(x,y,mSize);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
-        plot(x,fitObj.Fitted,'-r')
+        plot(x,fitObj.Fitted,'-r');
         xlim(log10([2 100]));
         pX(end+1) = fitObj.Coefficients.Estimate(2);
         oX(end+1) = fitObj.Coefficients.Estimate(1);
@@ -76,10 +76,17 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Session 1 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
-        ylabel([varNamesToPlot{vv}])
-        xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        title(['Subject ' num2str(subList{ss})], 'FontSize', 14)
+        if plotNum ~= 1
+            yticklabels("");
+            xticklabels("");
+            xticks([]);
+            yticks([]);
+        else
+            ylabel(['Session one ' varNamesToPlot{vv}], 'FontSize', 14)
+            xlabel('puff pressure [log psi]', 'FontSize', 14)
+        end
+        % ylim(ylims{vv});
 
         % session two data
         y = sessTwo.(allVarNames{ii});
@@ -105,10 +112,14 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Session 2 - ' num2str(subList{ss}) sprintf(' R^2=%2.2f',rsquare)])
-        ylabel([varNamesToPlot{vv}])
-        xlabel('puff pressure [log psi]')
-        ylim(ylims{vv});
+        if plotNum == 1
+            ylabel(['Session two ' varNamesToPlot{vv}], 'FontSize', 14)
+        end
+        yticklabels("");
+        xticklabels("");
+        xticks([]);
+        yticks([]);
+        % ylim(ylims{vv});
     end
     
     % plot parameter test retest values across subjects
@@ -122,11 +133,11 @@ for vv = 1:length(varNamesToPlot)
     if rsquare > 1 || rsquare < 0
         rsquare = nan;
     end
-    title([varNamesToPlot{vv} ' parameter - ' sprintf(' R^2=%2.2f',rsquare)])
-    xlabel([varNamesToPlot{vv} ' parameter session 1'])
-    ylabel([varNamesToPlot{vv} ' parameter session 2'])
-    ylim([-28 -10]);
-    axis(pl, 'square');
+    title([varNamesToPlot{vv} ' slope by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
+    xlabel(['Slope'], 'FontSize', 14)
+    ylabel(['Slope'], 'FontSize', 14)
+    % ylim([-28 -10]);
+    axis(pl, 'equal', 'square');
     
 %     % plot offset test retest values across subjects
 %     subplot(1,2,2);

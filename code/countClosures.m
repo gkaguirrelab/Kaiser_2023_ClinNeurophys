@@ -1,10 +1,10 @@
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='2_2022.csv';
+spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 T = readtable(fullfile(dataPath,'data',spreadsheet));
 allVarNames = T.Properties.VariableNames;
 
-scans = T(ismember(T.subjectID,14588),:);
+scans = T(ismember(T.subjectID,15514),:);
 
 % separate scans into a table for each of the sessions
 dates = unique(scans.scanDate);
