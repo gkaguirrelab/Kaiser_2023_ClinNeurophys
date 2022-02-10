@@ -14,8 +14,10 @@ spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 % run subjects 149590, 14589, and 14588 only for highest 3 PSI levels
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588};
+% };
 varNamesToPlot = {'latencyI', 'aucI'};
 highestOnly = 'TRUE';
+% highestOnly = 'FALSE';
 
 xFit = linspace(log10(3),log10(70),50);
 % ylims = {[30 80]};
@@ -136,8 +138,8 @@ for vv = 1:length(varNamesToPlot)
     title([varNamesToPlot{vv} ' slope by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
     xlabel(['Slope'], 'FontSize', 14)
     ylabel(['Slope'], 'FontSize', 14)
-    % ylim([-28 -10]);
-    axis(pl, 'equal', 'square');
+    ylim(xlim);
+    axis(pl, 'square');
     
 %     % plot offset test retest values across subjects
 %     subplot(1,2,2);
