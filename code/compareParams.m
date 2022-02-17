@@ -94,12 +94,12 @@ xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
 weights = abs(coeff(:,1)');
 
 % get session one scores
-sO = (slopes-mean(slopesSessOne))./std(slopesSessOne);
+sO = (slopesSessOne-mean(slopesSessOne))./std(slopesSessOne);
 [coeff,score,latent,tsquared,explained,mu] = pca(sO, 'VariableWeights', weights);
 xx = score(:,1);
 
 % get session two scores
-sT = (slopes-mean(slopesSessOne))./std(slopesSessTwo);
+sT = (slopesSessTwo-mean(slopesSessTwo))./std(slopesSessTwo);
 [coeff,score,latent,tsquared,explained,mu] = pca(sT, 'VariableWeights', weights);
 yy = score(:,1);
 
