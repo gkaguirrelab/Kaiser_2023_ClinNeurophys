@@ -1,10 +1,14 @@
 dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
+subList = {14587, 14586};
+
 T = readtable(fullfile(dataPath,'data',spreadsheet));
 allVarNames = T.Properties.VariableNames;
 
-scans = T(ismember(T.subjectID,15514),:);
+for ss = 1:length(subList)
+
+scans = T(ismember(T.subjectID,subList{ss}),:);
 
 % separate scans into a table for each of the sessions
 dates = unique(scans.scanDate);
@@ -26,8 +30,11 @@ dTwo = sessTwo(ismember(sessTwo.intendedPSI,30),:);
 eOne = sessOne(ismember(sessOne.intendedPSI,60),:);
 eTwo = sessTwo(ismember(sessTwo.intendedPSI,60),:);
 
+subList{ss}
+
 numValid = {height(aOne(ismember(aOne.valid,'TRUE'),:)), height(aTwo(ismember(aTwo.valid,'TRUE'),:)),...
     height(bOne(ismember(bOne.valid,'TRUE'),:)), height(bTwo(ismember(bTwo.valid,'TRUE'),:)),...
     height(cOne(ismember(cOne.valid,'TRUE'),:)), height(cTwo(ismember(cTwo.valid,'TRUE'),:)),...
     height(dOne(ismember(dOne.valid,'TRUE'),:)), height(dTwo(ismember(dTwo.valid,'TRUE'),:)),...
     height(eOne(ismember(eOne.valid,'TRUE'),:)), height(eTwo(ismember(eTwo.valid,'TRUE'),:))}
+end

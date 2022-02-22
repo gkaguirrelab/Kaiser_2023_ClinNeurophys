@@ -117,3 +117,38 @@ xlabel(['Session one'])
 ylabel(['Session two'])
 axis square
 ylim(xlim)
+
+%% compare scores to slopes
+
+figure();
+plotNum = 1;
+
+for vv = 1:length(varNamesToPlot)
+    subplot(2, length(varNamesToPlot), plotNum)
+    scatter(xx,slopesSessOne(:,vv))
+    fitObj = fitlm(xx,slopesSessOne(:,vv),'RobustOpts', 'on');
+    hold on
+    plot(xx,fitObj.Fitted,'-r')
+    rsquare = fitObj.Rsquared.Ordinary;
+    if rsquare > 1 || rsquare < 0
+        rsquare = nan;
+    end
+    title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
+    xlabel(['Session one PC1 scores'])
+    ylabel(['Session one slopes'])
+
+    subplot(2, length(varNamesToPlot), plotNum + length(varNamesToPlot))
+    scatter(yy,slopesSessTwo(:,vv))
+    fitObj = fitlm(yy,slopesSessTwo(:,vv),'RobustOpts', 'on');
+    hold on
+    plot(yy,fitObj.Fitted,'-r')
+    rsquare = fitObj.Rsquared.Ordinary;
+    if rsquare > 1 || rsquare < 0
+        rsquare = nan;
+    end
+    title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
+    xlabel(['Session two PC1 scores'])
+    ylabel(['Session two slopes'])
+    plotNum = plotNum + 1;
+
+end

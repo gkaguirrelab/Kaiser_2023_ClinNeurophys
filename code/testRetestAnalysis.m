@@ -8,13 +8,14 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='UPENN Summary with IPSI Responses_02072022.csv';
+spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
 % run subjects 149590, 14589, and 14588 only for highest 3 PSI levels
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588};
-varNamesToPlot = {'latencyI', 'aucI', 'closeTimeI', 'openTimeI'};
+    14590, 14589, 14588, 14587, 14586};
+varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
+    'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 highestOnly = true;
 % highestOnly = false;
 
@@ -144,7 +145,7 @@ for vv = 1:length(varNamesToPlot)
     
 end
 
-%% 2 by 2 test retest slope or offset plots
+%% 2 by 5 test retest slope or offset plots
 
 figure();
 
@@ -203,7 +204,7 @@ for vv = 1:length(varNamesToPlot)
     end
     
     % plot offset test retest values across subjects
-    pl = subplot(2,2,vv);
+    pl = subplot(2,5,vv);
     plot(oX, oY, 'ob', 'MarkerSize', 10);
     fitObj = fitlm(oX,oY,'RobustOpts', 'on');
     hold on
@@ -216,8 +217,8 @@ for vv = 1:length(varNamesToPlot)
     title([varNamesToPlot{vv} ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
     xlabel(['Offset'], 'FontSize', 16)
     ylabel(['Offset'], 'FontSize', 16)
-    ylim(xlim);
     axis(pl, 'square');
+    ylim(xlim);
     
 end
 
