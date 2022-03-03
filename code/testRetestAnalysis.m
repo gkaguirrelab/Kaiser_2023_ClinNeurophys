@@ -11,13 +11,13 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
-% run subjects 149590, 14589, and 14588 only for highest 3 PSI levels
+% only run subjects 149590, 14589, and 14588 for highest 3 PSI levels
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
+    14587, 14586};
+% varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
 varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
-    'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
-highestOnly = true;
-% highestOnly = false;
+     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
+highestOnly = false;
 
 xFit = linspace(log10(3),log10(70),50);
 % ylims = {[30 65]};
@@ -145,11 +145,13 @@ for vv = 1:length(varNamesToPlot)
     
 end
 
-%% 2 by 5 test retest slope or offset plots
+%% 5 by 2 test retest slope or offset plots
 
 figure();
 
 for vv = 1:length(varNamesToPlot)
+    
+    offset = false;
     
     oX = [];
     oY = [];
@@ -203,22 +205,40 @@ for vv = 1:length(varNamesToPlot)
         pY(end+1) = fitObj.Coefficients.Estimate(2);
     end
     
-    % plot offset test retest values across subjects
-    pl = subplot(2,5,vv);
-    plot(oX, oY, 'ob', 'MarkerSize', 10);
-    fitObj = fitlm(oX,oY,'RobustOpts', 'on');
-    hold on
-    plot(oX,fitObj.Fitted,'-r')
-    pl.Box = 'off';
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
+    % plot test retest values across subjects
+    if offset
+        pl = subplot(2,5,vv);
+        plot(oX, oY, 'ob', 'MarkerSize', 10);
+        fitObj = fitlm(oX,oY,'RobustOpts', 'on');
+        hold on
+        plot(oX,fitObj.Fitted,'-r')
+        pl.Box = 'off';
+        rsquare = fitObj.Rsquared.Ordinary;
+        if rsquare > 1 || rsquare < 0
+            rsquare = nan;
+        end
+        title([varNamesToPlot{vv} ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+        xlabel(['Offset'], 'FontSize', 16)
+        ylabel(['Offset'], 'FontSize', 16)
+        axis(pl, 'square');
+        ylim(xlim);
+    else
+        pl = subplot(2,5,vv);
+        plot(pX, pY, 'ob', 'MarkerSize', 10);
+        fitObj = fitlm(pX,pY,'RobustOpts', 'on');
+        hold on
+        plot(pX,fitObj.Fitted,'-r')
+        pl.Box = 'off';
+        rsquare = fitObj.Rsquared.Ordinary;
+        if rsquare > 1 || rsquare < 0
+            rsquare = nan;
+        end
+        title([varNamesToPlot{vv} ' slope by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+        xlabel(['Slope'], 'FontSize', 16)
+        ylabel(['Slope'], 'FontSize', 16)
+        axis(pl, 'square');
+        ylim(xlim);
     end
-    title([varNamesToPlot{vv} ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-    xlabel(['Offset'], 'FontSize', 16)
-    ylabel(['Offset'], 'FontSize', 16)
-    axis(pl, 'square');
-    ylim(xlim);
     
 end
 
