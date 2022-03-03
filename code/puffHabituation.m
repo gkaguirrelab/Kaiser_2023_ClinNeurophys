@@ -81,7 +81,7 @@ for vv = 1:length(varNamesToPlot)
             temp = scans(ismember(scans.scanNumber, zz),:);            
             if ~isempty(temp)
                 residuals = temp.(varNamesToPlot{vv})' - modelY(zz-1);
-                resMeansByAcq(end+1) = mean(residuals);
+                resMeansByAcq(end+1) = mean(residuals,'omitnan');
             end            
         end
         
