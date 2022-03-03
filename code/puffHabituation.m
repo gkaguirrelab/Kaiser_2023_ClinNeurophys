@@ -18,17 +18,13 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='UPenn_AFiles_IpsiOnly_03022022.csv';
+spreadsheet ='Upenn_Ipsilateral Afiles_clean_03032022.csv';
 
 % choose subject and parameters
 % all subjects = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
 %    14587, 14586}
-% only run subjects 149590, 14589, and 14588 for highest 3 PSI levels
-subList = {14587};
+subList = {15512, 14596, 14594, 14592, 14592, 14591, 14590, 14589, 14587, 14586};
 varNamesToPlot = {'latency'};
-highestOnly = false;
-
-xFit = linspace(log10(3),log10(70),50);
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -43,9 +39,9 @@ for vv = 1:length(varNamesToPlot)
     for ss = 1:length(subList)
         
         plotNum = plotNum + 1;
-        acqMeans = [];
-        resMeansByAcq = [];
-        psi = [];
+        acqMeans = NaN(1,25);
+        resMeansByAcq = NaN(1,25);
+        psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % find scans for desired subject
@@ -55,21 +51,10 @@ for vv = 1:length(varNamesToPlot)
         xPuffs = unique(scans.stimIndex);
 
         % get mean values for each scan
-        for zz = 1:length(xScans)
+        for zz = 1:25
             temp = scans(ismember(scans.scanNumber, zz+1),:);
             if ~isempty(temp) 
-               acqMeans(end+1) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
-               if ismember(zz+1, [3 8 13 24 25])
-                   psi(end+1) = 3.5;
-               elseif ismember(zz+1, [9 11 12 20 22])
-                   psi(end+1) = 7.5;
-               elseif ismember(zz+1, [4 7 16 17 21])
-                   psi(end+1) = 15;
-               elseif ismember(zz+1, [2 10 15 18 26])
-                   psi(end+1) = 30;
-               else
-                   psi(end+1) = 60;
-               end
+               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
              end
         end
 
@@ -77,27 +62,28 @@ for vv = 1:length(varNamesToPlot)
         modelY = fitObj.Fitted;
 
         % calculate residuals as a function of acquisition number
-        for zz = 2:26            
-            temp = scans(ismember(scans.scanNumber, zz),:);            
+        for zz = 1:25            
+            temp = scans(ismember(scans.scanNumber, zz+1),:);            
             if ~isempty(temp)
-                residuals = temp.(varNamesToPlot{vv})' - modelY(zz-1);
-                resMeansByAcq(end+1) = mean(residuals,'omitnan');
+                residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
+                resMeansByAcq(zz) = mean(residuals,'omitnan');
             end            
         end
         
         % calculate residuals as a function of trial number
-        resByTrial = NaN(length(xScans), length(xPuffs));
-        resMeansByTrial = NaN(1,length(xPuffs));
-        for zz = 1:length(xPuffs)            
+        resByTrial = NaN(25, 8);
+        resMeansByTrial = NaN(1,8);
+        for zz = 1:8
             temp = scans(ismember(scans.stimIndex, zz),:);
             if ~isempty(temp)
-                for yy = 1:length(xScans)
-                    scan = xScans(yy);
-                    tt = temp(ismember(temp.scanNumber, scan),:);
+                for yy = 1:25
+                    tt = temp(ismember(temp.scanNumber, yy+1),:);
                     if isempty(tt)
                         residual = NaN;
-                    else
+                    elseif length(tt.(varNamesToPlot{vv})) == 1
                         residual = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                    else
+                        residual = mean(tt.(varNamesToPlot{vv})(1) + tt.(varNamesToPlot{vv})(2) - 2*modelY(yy));
                     end
                     resByTrial(yy,zz) = residual;
                 end
@@ -107,15 +93,15 @@ for vv = 1:length(varNamesToPlot)
 
         % plot mean residual as a function of acquisition number
         subplot(2,length(subList),plotNum);
-        scatter(xScans,resMeansByAcq);
-        fitObj = fitlm(xScans,resMeansByAcq,'RobustOpts', 'on');
+        scatter((1:25),resMeansByAcq);
+        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
         hold on
-        plot(xScans,fitObj.Fitted,'-r');
+        plot((1:25),fitObj.Fitted,'-r');
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Subject ' num2str(subList{ss})], 'FontSize', 14)
+        title(['Subject ' num2str(subList{ss}) ' ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
         if plotNum ~= 1
             yticklabels("");
             xticklabels("");
@@ -128,15 +114,15 @@ for vv = 1:length(varNamesToPlot)
         
         % plot mean residual as a function of trial number
         subplot(2,length(subList),plotNum + length(subList));
-        scatter(xPuffs,resMeansByTrial);
-        fitObj = fitlm(xPuffs,resMeansByTrial,'RobustOpts', 'on');
+        scatter((1:8),resMeansByTrial);
+        fitObj = fitlm((1:8),resMeansByTrial,'RobustOpts', 'on');
         hold on
-        plot(xPuffs,fitObj.Fitted,'-r');
+        plot((1:8),fitObj.Fitted,'-r');
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Subject ' num2str(subList{ss})], 'FontSize', 14)
+        title(['Subject ' num2str(subList{ss}) ' ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
         if plotNum ~= 1
             yticklabels("");
             xticklabels("");
