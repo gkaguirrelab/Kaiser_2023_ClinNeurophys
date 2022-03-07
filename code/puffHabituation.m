@@ -24,7 +24,8 @@ spreadsheet ='Upenn_Ipsilateral Afiles_clean_03032022.csv';
 % all subjects = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
 %    14587, 14586}
 subList = {15512, 14596, 14594, 14592, 14592, 14591, 14590, 14589, 14587, 14586};
-varNamesToPlot = {'latency'};
+varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
+     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -83,7 +84,9 @@ for vv = 1:length(varNamesToPlot)
                     elseif length(tt.(varNamesToPlot{vv})) == 1
                         residual = tt.(varNamesToPlot{vv})(1) - modelY(yy);
                     else
-                        residual = mean(tt.(varNamesToPlot{vv})(1) + tt.(varNamesToPlot{vv})(2) - 2*modelY(yy));
+                        res1 = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                        res2 = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                        residual = mean([res1 res2]);
                     end
                     resByTrial(yy,zz) = residual;
                 end
@@ -108,7 +111,7 @@ for vv = 1:length(varNamesToPlot)
             xticks([]);
             yticks([]);
         else
-            ylabel(['Session one ' varNamesToPlot{vv} ' residual'], 'FontSize', 14)
+            ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
             xlabel('Acquisition number', 'FontSize', 14)
         end
         
@@ -129,7 +132,7 @@ for vv = 1:length(varNamesToPlot)
             xticks([]);
             yticks([]);
         else
-            ylabel(['Session one ' varNamesToPlot{vv} ' residual'], 'FontSize', 14)
+            ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
             xlabel('Trial number', 'FontSize', 14)
         end
 
