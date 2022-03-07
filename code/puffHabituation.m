@@ -18,12 +18,11 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='Upenn_Ipsilateral Afiles_clean_03032022.csv';
+spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 
 % choose subject and parameters
-% all subjects = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-%    14587, 14586}
-subList = {15512, 14596, 14594, 14592, 14592, 14591, 14590, 14589, 14587, 14586};
+subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
 varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
@@ -104,7 +103,7 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Subject ' num2str(subList{ss}) ' ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
+        title({['Subject ' num2str(subList{ss})],sprintf(' R^2=%2.2f',rsquare)}, 'FontSize', 14)
         if plotNum ~= 1
             yticklabels("");
             xticklabels("");
@@ -125,7 +124,7 @@ for vv = 1:length(varNamesToPlot)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        title(['Subject ' num2str(subList{ss}) ' ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 14)
+        title({['Subject ' num2str(subList{ss})],sprintf(' R^2=%2.2f',rsquare)}, 'FontSize', 14)
         if plotNum ~= 1
             yticklabels("");
             xticklabels("");
