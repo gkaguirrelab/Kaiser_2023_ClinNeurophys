@@ -20,6 +20,7 @@ spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 % choose subject and parameters
 subList = {15512};
 varNamesToPlot = {'auc'};
+session = 1;
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -36,22 +37,54 @@ for vv = 1:length(varNamesToPlot)
         allbx = [];
         allby = [];
         plotNum = plotNum + 1;
+        psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
         acqMeans = NaN(1,25);
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
 
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        dates = unique(scans.scanDate);
+        if session == 1
+            scans = scans(ismember(scans.scanDate,dates(1,1)),:);
+        else
+            scans = scans(ismember(scans.scanDate,dates(2,1)),:);
+        end
 
         % get individual and mean values for each scan
         for zz = 1:25
             temp = scans(ismember(scans.scanNumber, zz+1),:);
             if ~isempty(temp)
-                trialNums = (temp.stimIndex)'*zz;
+                trialNums = (temp.stimIndex)' + 8*(zz-1);
                 allbx = horzcat(allbx, trialNums);
                 allby = horzcat(allby, (temp.(varNamesToPlot{vv}))');
                 acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
              end
+        end
+        
+        % get model values as a function of puff intensity
+        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+        modelFit = fitObj.Fitted;
+        
+        % calculate model fit points
+        modelY = zeros(1,length(allbx));
+        aTrials = horzcat((9:16),(49:56),(89:96),(177:192));
+        bTrials = horzcat((57:64),(73:88),(145:152),(161:168));
+        cTrials = horzcat((17:24),(41:48),(113:128),(153:160));
+        dTrials = horzcat((1:8),(65:72),(105:112),(129:136),(193:200));
+        eTrials = horzcat((25:40),(97:104),(137:144),(169:176));
+        for i = 1:length(allbx)
+            if ismember(allbx(i),aTrials)
+                modelY(i) = modelFit(2);
+            elseif ismember(allbx(i),bTrials)
+                modelY(i) = modelFit(8);
+            elseif ismember(allbx(i),cTrials)
+                modelY(i) = modelFit(3);
+            elseif ismember(allbx(i),dTrials)
+                modelY(i) = modelFit(1);
+            elseif ismember(allbx(i),eTrials)
+                modelY(i) = modelFit(4);
+            end
         end
         
         % plot all puffs
@@ -65,15 +98,13 @@ for vv = 1:length(varNamesToPlot)
         
         % plot fits
         subplot(3,length(subList),plotNum+length(subList));
-        fitObj = fitlm(allbx,allby,'RobustOpts', 'on');
-        modelY = fitObj.Fitted;
         scatter(allbx,modelY, '_');
         if plotNum == 1
             ylabel([varNamesToPlot{vv} ' model fit value'], 'FontSize', 14)
         end
         
         % plot residuals
-        residuals = allby - modelY';
+        residuals = allby - modelY;
         subplot(3,length(subList),plotNum+length(subList)*2);
         scatter(allbx,residuals);
         if plotNum == 1
