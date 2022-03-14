@@ -16,16 +16,120 @@ spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586};
-varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
-     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
+varNamesToPlot = {'auc', 'maxClosingVelocity', 'blinkRate'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
 allVarNames = T.Properties.VariableNames;
 
+%% get slopes for each session by acquisition
+figure();
 results = NaN(9,4);
 
-%% get slopes for each session
+for vv = 1:length(varNamesToPlot)
+    
+    subjectMeans = [];
+    sessOneSlopes = [];
+    sessTwoSlopes = [];
+    
+    for ss = 1:length(subList)
+        
+        psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
+        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+
+        % find scans for desired subject
+        scans = T(ismember(T.subjectID,subList{ss}),:);
+        scans = scans(ismember(scans.valid,'TRUE'),:);
+        dates = unique(scans.scanDate);
+        sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
+        sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
+
+        % calculate residuals as a function of trial number session 1
+        acqMeans = NaN(1,25);
+        for zz = 1:25
+            temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);
+            if ~isempty(temp) 
+               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
+            end
+        end
+
+        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+        modelY = fitObj.Fitted;
+        
+        resMeansByAcq = NaN(1,25);
+        for zz = 1:25            
+            temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);            
+            if ~isempty(temp)
+                residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
+                resMeansByAcq(zz) = mean(residuals,'omitnan');
+            end            
+        end
+        
+        % get session one slope
+        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
+        sessOneSlope = fitObj.Coefficients.Estimate(2);
+        sessOneSlopes(end+1) = sessOneSlope;
+        
+        % calculate residuals as a function of trial number session 2
+        acqMeans = NaN(1,25);
+        for zz = 1:25
+            temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);
+            if ~isempty(temp) 
+               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
+            end
+        end
+
+        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+        modelY = fitObj.Fitted;
+        
+        resMeansByAcq = NaN(1,25);
+        for zz = 1:25            
+            temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);            
+            if ~isempty(temp)
+                residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
+                resMeansByAcq(zz) = mean(residuals,'omitnan');
+            end            
+        end
+        
+        % get session two slope
+        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
+        sessTwoSlope = fitObj.Coefficients.Estimate(2);
+        sessTwoSlopes(end+1) = sessTwoSlope;
+        
+        % get mean slope across sessions
+        meanSlope = mean([sessOneSlope sessTwoSlope]);
+        subjectMeans(end+1) = meanSlope;
+
+    end
+    
+    [h,p,ci,stats] = ttest(subjectMeans);
+    co = corrcoef(sessOneSlopes,sessTwoSlopes);
+    meanSlope = mean(subjectMeans);
+    results(vv,1) = co(1,2);
+    results(vv,2) = meanSlope;
+    results(vv,3) = stats.tstat;
+    results(vv,4) = p;
+    
+    % plot slopes sessOne and sessTwo
+    subplot(1,length(varNamesToPlot),vv);
+    scatter(sessOneSlopes,sessTwoSlopes);
+    fitObj = fitlm(sessOneSlopes,sessTwoSlopes,'RobustOpts', 'on');
+    hold on
+    plot(sessOneSlopes,fitObj.Fitted,'-r');
+    rsquare = fitObj.Rsquared.Ordinary;
+    if rsquare > 1 || rsquare < 0
+        rsquare = nan;
+    end
+    title({['Residual slopes by acquisition'],sprintf('R=%2.2f',sqrt(rsquare))}, 'FontSize', 14)
+    ylabel([varNamesToPlot{vv} ' slope session 1'], 'FontSize', 14)
+    xlabel([varNamesToPlot{vv} ' slope session 2'], 'FontSize', 14)
+    
+end
+
+%% get slopes for each session by trial
+figure();
+results = NaN(9,4);
+
 for vv = 1:length(varNamesToPlot)
     
     subjectMeans = [];
@@ -129,11 +233,25 @@ for vv = 1:length(varNamesToPlot)
     end
     
     [h,p,ci,stats] = ttest(subjectMeans);
-    co = corrcoef(sessOneSlopes,sessTwoSlopes)
+    co = corrcoef(sessOneSlopes,sessTwoSlopes);
     meanSlope = mean(subjectMeans);
     results(vv,1) = co(1,2);
     results(vv,2) = meanSlope;
     results(vv,3) = stats.tstat;
     results(vv,4) = p;
+    
+    % plot slopes sessOne and sessTwo
+    subplot(1,length(varNamesToPlot),vv);
+    scatter(sessOneSlopes,sessTwoSlopes);
+    fitObj = fitlm(sessOneSlopes,sessTwoSlopes,'RobustOpts', 'on');
+    hold on
+    plot(sessOneSlopes,fitObj.Fitted,'-r');
+    rsquare = fitObj.Rsquared.Ordinary;
+    if rsquare > 1 || rsquare < 0
+        rsquare = nan;
+    end
+    title({['Residual slopes by trial'],sprintf('R=%2.2f',sqrt(rsquare))}, 'FontSize', 14)
+    ylabel([varNamesToPlot{vv} ' slope session 1'], 'FontSize', 14)
+    xlabel([varNamesToPlot{vv} ' slope session 2'], 'FontSize', 14)
     
 end
