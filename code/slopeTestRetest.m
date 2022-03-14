@@ -24,11 +24,12 @@ allVarNames = T.Properties.VariableNames;
 
 %% get slopes for each session by acquisition
 figure();
-results = NaN(9,4);
+results = NaN(length(varNamesToPlot),4);
+sam = NaN(15,length(varNamesToPlot));
 
 for vv = 1:length(varNamesToPlot)
     
-    subjectMeans = [];
+    subjectAcqMeans = [];
     sessOneSlopes = [];
     sessTwoSlopes = [];
     
@@ -44,7 +45,7 @@ for vv = 1:length(varNamesToPlot)
         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
         sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
 
-        % calculate residuals as a function of trial number session 1
+        % calculate residuals as a function of acquisition number session 1
         acqMeans = NaN(1,25);
         for zz = 1:25
             temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);
@@ -70,7 +71,7 @@ for vv = 1:length(varNamesToPlot)
         sessOneSlope = fitObj.Coefficients.Estimate(2);
         sessOneSlopes(end+1) = sessOneSlope;
         
-        % calculate residuals as a function of trial number session 2
+        % calculate residuals as a function of acquisition number session 2
         acqMeans = NaN(1,25);
         for zz = 1:25
             temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);
@@ -98,13 +99,17 @@ for vv = 1:length(varNamesToPlot)
         
         % get mean slope across sessions
         meanSlope = mean([sessOneSlope sessTwoSlope]);
-        subjectMeans(end+1) = meanSlope;
+        subjectAcqMeans(end+1) = meanSlope;
 
     end
     
-    [h,p,ci,stats] = ttest(subjectMeans);
+    for mm = 1:15
+       sam(mm,vv) = subjectAcqMeans(mm); 
+    end
+    
+    [h,p,ci,stats] = ttest(subjectAcqMeans);
     co = corrcoef(sessOneSlopes,sessTwoSlopes);
-    meanSlope = mean(subjectMeans);
+    meanSlope = mean(subjectAcqMeans);
     results(vv,1) = co(1,2);
     results(vv,2) = meanSlope;
     results(vv,3) = stats.tstat;
@@ -128,11 +133,12 @@ end
 
 %% get slopes for each session by trial
 figure();
-results = NaN(9,4);
+results = NaN(length(varNamesToPlot),4);
+stm = NaN(15,length(varNamesToPlot));
 
 for vv = 1:length(varNamesToPlot)
     
-    subjectMeans = [];
+    subjectTrialMeans = [];
     sessOneSlopes = [];
     sessTwoSlopes = [];
     
@@ -228,13 +234,17 @@ for vv = 1:length(varNamesToPlot)
         
         % get mean slope across sessions
         meanSlope = mean([sessOneSlope sessTwoSlope]);
-        subjectMeans(end+1) = meanSlope;
+        subjectTrialMeans(end+1) = meanSlope;
 
     end
     
-    [h,p,ci,stats] = ttest(subjectMeans);
+    for mm = 1:15
+       stm(mm,vv) = subjectTrialMeans(mm); 
+    end
+    
+    [h,p,ci,stats] = ttest(subjectTrialMeans);
     co = corrcoef(sessOneSlopes,sessTwoSlopes);
-    meanSlope = mean(subjectMeans);
+    meanSlope = mean(subjectTrialMeans);
     results(vv,1) = co(1,2);
     results(vv,2) = meanSlope;
     results(vv,3) = stats.tstat;
@@ -255,3 +265,32 @@ for vv = 1:length(varNamesToPlot)
     xlabel([varNamesToPlot{vv} ' slope session 2'], 'FontSize', 14)
     
 end
+
+%% dot plot by trial and acquisiton
+figure();
+
+% sam(:,2) = sam(:,2)./10;
+% stm(:,2) = stm(:,2)./10;
+
+% acquisition plot
+subplot(1,2,1);
+% x = zeros(1,15);
+% for pp = 1:length(varNamesToPlot)
+%    scatter(x+pp,sam(:,pp));
+%    hold on
+% end
+notBoxPlot(sam, 'style', 'sdline');
+title({['Residual mean slopes across acquisition by subject']}, 'FontSize', 14)
+ylabel(['Residual mean slope'], 'FontSize', 14)
+xlabel(['Blink feature'], 'FontSize', 14)
+
+% trial plot
+subplot(1,2,2);
+% x = zeros(1,15);
+% for pp = 1:length(varNamesToPlot)
+%    scatter(x+pp,stm(:,pp));
+%    hold on
+% end
+notBoxPlot(stm, 'style', 'sdline');
+title({['Residual mean slopes across trial by subject']}, 'FontSize', 14)
+xlabel(['Blink feature'], 'FontSize', 14)
