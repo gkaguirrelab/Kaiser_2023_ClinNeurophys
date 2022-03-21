@@ -269,8 +269,8 @@ end
 %% dot plot by trial and acquisiton
 figure();
 
-% sam(:,2) = sam(:,2)./10;
-% stm(:,2) = stm(:,2)./10;
+sam(:,2) = sam(:,2)./10;
+stm(:,2) = stm(:,2)./10;
 
 % acquisition plot
 subplot(1,2,1);

@@ -21,10 +21,13 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 
 % choose subject and parameters
-subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
-varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
-     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
+% subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+%     14590, 14589, 14588, 14587, 14586};
+% varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
+%      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
+
+subList = {14591};
+varNamesToPlot = {'maxClosingVelocity'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -132,6 +135,99 @@ for vv = 1:length(varNamesToPlot)
             ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
             xlabel('Trial number', 'FontSize', 14)
         end
+
+    end
+        
+end
+
+%% calculate and plot mean resuidual values for all trials by session
+for vv = 1:length(varNamesToPlot)
+    
+    figure();
+    plotNum = 0;
+    
+    for ss = 1:length(subList)
+        
+        plotNum = plotNum + 1;
+        acqMeans = NaN(1,25);
+        sess = 1;
+        x = [];
+        y = [];
+        psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
+        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+
+        % find scans for desired subject
+        scans = T(ismember(T.subjectID,subList{ss}),:);
+        scans = scans(ismember(scans.valid,'TRUE'),:);
+        dates = unique(scans.scanDate);
+        sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
+        sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
+        if sess == 1
+            scans = sessOne;
+        else
+            scans = sessTwo;
+        end
+
+        % get mean values for each scan
+        for zz = 1:25
+            temp = scans(ismember(scans.scanNumber, zz+1),:);
+            if ~isempty(temp) 
+               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
+             end
+        end
+
+        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+        modelY = fitObj.Fitted;
+        
+        % calculate residuals as a function of trial number
+        resByTrial = NaN(25, 8);
+        resMeansByTrial = NaN(1,8);
+        for zz = 1:8
+            temp = scans(ismember(scans.stimIndex, zz),:);
+            if ~isempty(temp)
+                for yy = 1:25
+                    tt = temp(ismember(temp.scanNumber, yy+1),:);
+                    if isempty(tt)
+                        residual = NaN;
+                    elseif length(tt.(varNamesToPlot{vv})) == 1
+                        residual = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                    else
+                        res1 = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                        res2 = tt.(varNamesToPlot{vv})(1) - modelY(yy);
+                        residual = mean([res1 res2]);
+                    end
+                    resByTrial(yy,zz) = residual;
+                    y(end+1) = residual;
+                    x(end+1) = zz;
+                end
+            end
+            resMeansByTrial(1,zz) = mean(resByTrial(:,zz), 'omitnan');
+        end
+        
+        % plot residuals as a function of trial number
+        subplot(1,length(subList),plotNum);
+        scatter(x,y);
+        hold on
+        scatter((1:8), resMeansByTrial, 300);
+        fitObj = fitlm((1:8),resMeansByTrial,'RobustOpts', 'on');
+        hold on
+        plot((1:8),fitObj.Fitted,'-r');
+        rsquare = fitObj.Rsquared.Ordinary;
+        if rsquare > 1 || rsquare < 0
+            rsquare = nan;
+        end
+        title({['Subject ' num2str(subList{ss})],sprintf(' R^2=%2.2f',rsquare)}, 'FontSize', 14)
+        if plotNum ~= 1
+            yticklabels("");
+            xticklabels("");
+            xticks([]);
+            yticks([]);
+        else
+            ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
+            xlabel('Trial number', 'FontSize', 14)
+        end
+        xlim([0.5 8.5])
+        %ylim([-30 30])
 
     end
         

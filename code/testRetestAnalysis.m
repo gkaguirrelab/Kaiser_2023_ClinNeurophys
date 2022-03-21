@@ -11,12 +11,12 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
-% only run subjects 149590, 14589, and 14588 for highest 3 PSI levels
+% only run subjects 14590, 14589, and 14588 for highest 3 PSI levels
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14587, 14586};
-% varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
-varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
-     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
+    14590, 14589, 14588, 14587, 14586};
+varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
+% varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
+%      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 highestOnly = false;
 
 xFit = linspace(log10(3),log10(70),50);
@@ -65,10 +65,25 @@ for vv = 1:length(varNamesToPlot)
         y = y(idxX);
         weights = sessOne.numIpsi;
         mSize = weights*20;
+        
+        % session one means
+        sm = NaN(1,5);
+        aa = sessOne(ismember(sessOne.intendedPSI, 3.5),:);
+        bb = sessOne(ismember(sessOne.intendedPSI, 7.5),:);
+        cc = sessOne(ismember(sessOne.intendedPSI, 15),:);
+        dd = sessOne(ismember(sessOne.intendedPSI, 30),:);
+        ee = sessOne(ismember(sessOne.intendedPSI, 60),:);
+        sm(1) = mean(aa.(allVarNames{ii}), 'omitnan');
+        sm(2) = mean(bb.(allVarNames{ii}), 'omitnan');
+        sm(3) = mean(cc.(allVarNames{ii}), 'omitnan');
+        sm(4) = mean(dd.(allVarNames{ii}), 'omitnan');
+        sm(5) = mean(ee.(allVarNames{ii}), 'omitnan');
 
         % make plot
         subplot(2,length(subList),plotNum);
         scatter(x,y,mSize);
+%         hold on
+%         scatter(log10([3.5 7.5 15 30 60]),sm,300);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         hold on
         plot(x,fitObj.Fitted,'-r');
@@ -145,7 +160,7 @@ for vv = 1:length(varNamesToPlot)
     
 end
 
-%% 5 by 2 test retest slope or offset plots
+%% 2 by 2 test retest slope or offset plots
 
 figure();
 
@@ -207,11 +222,11 @@ for vv = 1:length(varNamesToPlot)
     
     % plot test retest values across subjects
     if offset
-        pl = subplot(2,5,vv);
-        plot(oX, oY, 'ob', 'MarkerSize', 10);
+        pl = subplot(2,2,vv);
+        plot(oX, oY, 'ob', 'MarkerSize', 10, 'MarkerEdgeColor','red');
         fitObj = fitlm(oX,oY,'RobustOpts', 'on');
         hold on
-        plot(oX,fitObj.Fitted,'-r')
+        plot(oX,fitObj.Fitted);
         pl.Box = 'off';
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
@@ -222,12 +237,16 @@ for vv = 1:length(varNamesToPlot)
         ylabel(['Offset'], 'FontSize', 16)
         axis(pl, 'square');
         ylim(xlim);
+        yticklabels("");
+        xticklabels("");
+        xticks([]);
+        yticks([]);
     else
-        pl = subplot(2,5,vv);
-        plot(pX, pY, 'ob', 'MarkerSize', 10);
+        pl = subplot(2,2,vv);
+        plot(pX, pY,'ob', 'MarkerSize', 10, 'MarkerEdgeColor','red');
         fitObj = fitlm(pX,pY,'RobustOpts', 'on');
         hold on
-        plot(pX,fitObj.Fitted,'-r')
+        plot(pX,fitObj.Fitted);
         pl.Box = 'off';
         rsquare = fitObj.Rsquared.Ordinary;
         if rsquare > 1 || rsquare < 0
