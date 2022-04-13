@@ -9,8 +9,14 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
-subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+highestOnly = true;
+if highestOnly
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
+else
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14587, 14586};
+end
 varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 
@@ -29,6 +35,12 @@ for vv = 1:length(varNamesToPlot)
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        if highestOnly
+           A = scans(ismember(scans.intendedPSI, 15),:);
+           B = scans(ismember(scans.intendedPSI, 30),:);
+           C = scans(ismember(scans.intendedPSI, 60),:);
+           scans = vertcat(A, B, C);
+        end
         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
         weights = scans.numIpsi;
         dates = unique(scans.scanDate);
