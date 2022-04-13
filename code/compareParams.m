@@ -6,7 +6,7 @@
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='2_2022.csv';
+spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};

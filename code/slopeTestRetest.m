@@ -16,7 +16,8 @@ spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586};
-varNamesToPlot = {'auc', 'maxClosingVelocity', 'blinkRate'};
+% varNamesToPlot = {'auc', 'maxClosingVelocity', 'blinkRate'};
+varNamesToPlot = {'maxClosingVelocity'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -269,23 +270,26 @@ end
 %% dot plot by trial and acquisiton
 figure();
 
-sam(:,2) = sam(:,2)./10;
-stm(:,2) = stm(:,2)./10;
+% sam(:,2) = sam(:,2)./10;
+% stm(:,2) = stm(:,2)./10;
+
+% sam(:,1) = sam(:,1)./10;
+% stm(:,1) = stm(:,1)./10;
 
 % acquisition plot
-subplot(1,2,1);
-% x = zeros(1,15);
-% for pp = 1:length(varNamesToPlot)
-%    scatter(x+pp,sam(:,pp));
-%    hold on
-% end
-notBoxPlot(sam, 'style', 'sdline');
-title({['Residual mean slopes across acquisition by subject']}, 'FontSize', 14)
-ylabel(['Residual mean slope'], 'FontSize', 14)
-xlabel(['Blink feature'], 'FontSize', 14)
+% subplot(1,2,1);
+% % x = zeros(1,15);
+% % for pp = 1:length(varNamesToPlot)
+% %    scatter(x+pp,sam(:,pp));
+% %    hold on
+% % end
+% notBoxPlot(sam, 'style', 'sdline');
+% title({['Residual mean slopes across acquisition by subject']}, 'FontSize', 14)
+% ylabel(['Residual mean slope'], 'FontSize', 14)
+% xlabel(['Blink feature'], 'FontSize', 14)
 
 % trial plot
-subplot(1,2,2);
+% subplot(1,2,2);
 % x = zeros(1,15);
 % for pp = 1:length(varNamesToPlot)
 %    scatter(x+pp,stm(:,pp));
@@ -294,3 +298,25 @@ subplot(1,2,2);
 notBoxPlot(stm, 'style', 'sdline');
 title({['Residual mean slopes across trial by subject']}, 'FontSize', 14)
 xlabel(['Blink feature'], 'FontSize', 14)
+
+%  % get BA stats
+differences = sessTwoSlopes - sessOneSlopes;
+meanD = mean(differences,'omitnan');
+meanO = (sessOneSlopes + sessTwoSlopes) ./ 2;
+
+% get IQR
+range = iqr(differences);
+low = meanD - 0.5*range;
+high = meanD + 0.5*range;
+
+% plot stats
+figure();
+scatter(meanO, differences, 150, 'MarkerEdgeColor', 'r');
+hold on
+yline(meanD,'-',num2str(meanD));
+yline(low,'--',num2str(low));
+yline(high,'--',num2str(high));
+title([varNamesToPlot{vv} ' residual'], 'FontSize', 16)
+xlabel(['Mean slope'], 'FontSize', 16)
+ylabel(['Slope difference'], 'FontSize', 16)
+axis(pl, 'square');

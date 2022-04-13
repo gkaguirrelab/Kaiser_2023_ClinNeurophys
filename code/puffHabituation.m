@@ -21,12 +21,12 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 
 % choose subject and parameters
-% subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-%     14590, 14589, 14588, 14587, 14586};
+subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
 % varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
 %      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
-subList = {14591};
+% subList = {14591};
 varNamesToPlot = {'maxClosingVelocity'};
 
 % create MATLAB table variable
@@ -94,29 +94,30 @@ for vv = 1:length(varNamesToPlot)
             resMeansByTrial(1,zz) = mean(resByTrial(:,zz), 'omitnan');
         end
 
-        % plot mean residual as a function of acquisition number
-        subplot(2,length(subList),plotNum);
-        scatter((1:25),resMeansByAcq);
-        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
-        hold on
-        plot((1:25),fitObj.Fitted,'-r');
-        rsquare = fitObj.Rsquared.Ordinary;
-        if rsquare > 1 || rsquare < 0
-            rsquare = nan;
-        end
-        title({['Subject ' num2str(subList{ss})],sprintf(' R^2=%2.2f',rsquare)}, 'FontSize', 14)
-        if plotNum ~= 1
-            yticklabels("");
-            xticklabels("");
-            xticks([]);
-            yticks([]);
-        else
-            ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
-            xlabel('Acquisition number', 'FontSize', 14)
-        end
+%         % plot mean residual as a function of acquisition number
+%         subplot(2,length(subList),plotNum);
+%         scatter((1:25),resMeansByAcq);
+%         fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
+%         hold on
+%         plot((1:25),fitObj.Fitted,'-r');
+%         rsquare = fitObj.Rsquared.Ordinary;
+%         if rsquare > 1 || rsquare < 0
+%             rsquare = nan;
+%         end
+%         title({['Subject ' num2str(subList{ss})],sprintf(' R^2=%2.2f',rsquare)}, 'FontSize', 14)
+%         if plotNum ~= 1
+%             yticklabels("");
+%             xticklabels("");
+%             xticks([]);
+%             yticks([]);
+%         else
+%             ylabel([varNamesToPlot{vv} ' residual'], 'FontSize', 14)
+%             xlabel('Acquisition number', 'FontSize', 14)
+%         end
         
         % plot mean residual as a function of trial number
-        subplot(2,length(subList),plotNum + length(subList));
+%         subplot(2,length(subList),plotNum + length(subList));
+        subplot(1,length(subList),plotNum);
         scatter((1:8),resMeansByTrial);
         fitObj = fitlm((1:8),resMeansByTrial,'RobustOpts', 'on');
         hold on
@@ -663,11 +664,14 @@ for vv = 1:length(varNamesToPlot)
     end
     
     % plot slopes across subjects
-    pl = subplot(2,ceil(length(varNamesToPlot)/2),vv);
+%     pl = subplot(2,ceil(length(varNamesToPlot)/2),vv);
+    pl = subplot(1,1,vv);
     plot(pX, pY, 'ob', 'MarkerSize', 10);
     fitObj = fitlm(pX,pY,'RobustOpts', 'on');
     hold on
-    plot(pX,fitObj.Fitted,'-r')
+    plot((-4:1),(-4:1),'k')
+    plot(fitObj);
+%     plot(pX,fitObj.Fitted,'-r')
     pl.Box = 'off';
     rsquare = fitObj.Rsquared.Ordinary;
     if rsquare > 1 || rsquare < 0

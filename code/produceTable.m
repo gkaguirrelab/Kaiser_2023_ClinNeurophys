@@ -14,14 +14,18 @@ spreadsheet1 ='UPenn Ipsi Summary_25ms_02062022.csv';
 spreadsheet2 ='Upenn_Ipsilateral Afiles_clean_full.csv';
 
 % choose subject and parameters
-% only run subjects 14590, 14589, and 14588 for highest 3 PSI levels
-subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
 varNamesToPlot1 = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'blinkRate'};
 varNamesToPlot2 = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 highestOnly = true;
+if highestOnly
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
+else
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14587, 14586};
+end
 
 xFit = linspace(log10(3),log10(70),50);
 
@@ -36,6 +40,8 @@ allVarNames2 = T2.Properties.VariableNames;
 %% get mean R2s
 
 R2s = [];
+CIL1 = [];
+CIH1 = [];
 
 for vv = 1:length(varNamesToPlot1)
     
@@ -76,13 +82,19 @@ for vv = 1:length(varNamesToPlot1)
     end
     
     R2s(end+1) = mean(varR2,'omitnan');
-    
+    bootstat = sort(bootstrp(1000,@mean,varR2));
+    CIL1(end+1) = bootstat(25);
+    CIH1(end+1) = bootstat(975);
 end
 
 %% get r of test retest for slope and offset
 
 roffset = [];
 rslope = [];
+CIL2 = [];
+CIH2 = [];
+CIL3 = [];
+CIH3 = [];
 
 for vv = 1:length(varNamesToPlot1)
     
@@ -138,16 +150,37 @@ for vv = 1:length(varNamesToPlot1)
         pY(end+1) = fitObj.Coefficients.Estimate(2);
     end
     
-    co = corrcoef(oX,oY);
-    roffset(end+1) = co(1,2);
-    co = corrcoef(pX,pY);
-    rslope(end+1) = co(1,2);
+    % calculate BA stats in terms of percent
+    ab1 = abs(oX);
+    ab2 = abs(pX);
+    percentO = ((oY - oX) ./ ab1)*100;
+    meanPO = mean(percentO,'omitnan');
+    meanOO = (oX + oY) ./ 2;
+    percentS = ((pY - pX) ./ ab2)*100;
+    meanPS = mean(percentS,'omitnan');
+    meanOS = (pX + pY) ./ 2;
+    
+    % get CIs
+    MyFun = @(d) iqr(d);
+    slopestat = sort(bootstrp(1000,MyFun,percentS));
+    offsetstat = sort(bootstrp(1000,MyFun,percentO));
+    
+    % add to table arrays
+    CIL2(end+1) = slopestat(25);
+    CIH2(end+1) = slopestat(975);
+    CIL3(end+1) = offsetstat(25);
+    CIH3(end+1) = offsetstat(975);
+    roffset(end+1) = iqr(percentO);
+    rslope(end+1) = iqr(percentS);
+    
     
 end
 
 %% get R2 of the habituation effect across trials
 
 r2Hab = [];
+CIL4 = [];
+CIH4 = [];
 
 for vv = 1:length(varNamesToPlot2)
     
@@ -208,12 +241,17 @@ for vv = 1:length(varNamesToPlot2)
     end
         
     r2Hab(end+1) = mean(varR2,'omitnan');
+    bootstat = sort(bootstrp(1000,@mean,varR2));
+    CIL4(end+1) = bootstat(25);
+    CIH4(end+1) = bootstat(975);
     
 end
 
 %% get r of the test retetest of habituation across trials
 
 rHab = [];
+CIL5 = [];
+CIH5 = [];
 
 for vv = 1:length(varNamesToPlot2)
     
@@ -317,15 +355,28 @@ for vv = 1:length(varNamesToPlot2)
 
     end
     
-    co = corrcoef(sessOneSlopes,sessTwoSlopes);
-    rHab(end+1) = co(1,2);
+    % calculate BA stats in terms of percent
+    ab = abs(sessOneSlopes);
+    percentS = ((sessTwoSlopes - sessOneSlopes) ./ ab)*100;
+    meanPS = mean(percentS,'omitnan');
+    meanOS = (sessOneSlopes + sessTwoSlopes) ./ 2;
+    
+    % get CIs
+    MyFun = @(d) iqr(d);
+    slopestat = sort(bootstrp(1000,MyFun,percentS));
+    
+    rHab(end+1) = iqr(percentS);
+    CIL5(end+1) = slopestat(25);
+    CIH5(end+1) = slopestat(975);
     
 end
 
 %% write table
 
-col = {'R2 puff pressure model', 'TR r slope', 'TR r offset', 'R2 habituation', 'TR r habituation'};
+col = {'R2 puff pressure model', 'CI low 1', 'CI high 1', 'TR r slope', 'CI low 2', 'CI high 2', ...
+    'TR r offset',  'CI low 3', 'CI high 3', 'R2 habituation', 'CI low 4', 'CI high 4', ...
+    'TR r habituation', 'CI low 5', 'CI high 5'};
 row = {'AUC', 'Latency', 'Time under 20', 'Time to open', 'Initial velocity', ...
      'Time to close', 'Max closing velocity', 'Max opening velocity', 'Blink rate'};
-T = table(R2s', rslope', roffset', r2Hab', rHab', 'VariableNames', col, 'RowNames', row);
+T = table(R2s', CIL1', CIH1', rslope', CIL2', CIH2', roffset',  CIL3', CIH3', r2Hab', CIL4', CIH4', rHab',  CIL5', CIH5', 'VariableNames', col, 'RowNames', row);
 writetable(T, fullfile(dataPath,'data','correlationTable.csv'), 'WriteRowNames', 1);

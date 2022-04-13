@@ -11,13 +11,19 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
-% only run subjects 14590, 14589, and 14588 for highest 3 PSI levels
-subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
-varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
+% varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
 % varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
 %      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
-highestOnly = false;
+varNamesToPlot = {'maxClosingVelocityI'};
+highestOnly = true;
+if highestOnly
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
+else
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14587, 14586};
+end
+% subList = {14590}
 
 xFit = linspace(log10(3),log10(70),50);
 % ylims = {[30 65]};
@@ -104,7 +110,7 @@ for vv = 1:length(varNamesToPlot)
             ylabel(['Session one ' varNamesToPlot{vv}], 'FontSize', 14)
             xlabel('puff pressure [log psi]', 'FontSize', 14)
         end
-        % ylim(ylims{vv});
+%         ylim([3.5 9]);
 
         % session two data
         y = sessTwo.(allVarNames{ii});
@@ -133,11 +139,12 @@ for vv = 1:length(varNamesToPlot)
         if plotNum == 1
             ylabel(['Session two ' varNamesToPlot{vv}], 'FontSize', 14)
         end
+%         ylim([3.5 9]);
         yticklabels("");
         xticklabels("");
         xticks([]);
         yticks([]);
-        % ylim(ylims{vv});
+%         ylim(ylims{vv});
     end
     
     % plot parameter test retest values across subjects
@@ -146,7 +153,9 @@ for vv = 1:length(varNamesToPlot)
     plot(pX, pY, 'ob', 'MarkerSize', 10);
     fitObj = fitlm(pX,pY,'RobustOpts', 'on');
     hold on
-    plot(pX,fitObj.Fitted,'-r')
+%     plot(pX,fitObj.Fitted,'-r')
+    plot(fitObj);
+    plot((-2:5),(-2:5),'k');
     pl.Box = 'off';
     rsquare = fitObj.Rsquared.Ordinary;
     if rsquare > 1 || rsquare < 0
@@ -158,10 +167,29 @@ for vv = 1:length(varNamesToPlot)
     ylim(xlim);
     axis(pl, 'square');
     
+    % plot parameter test retest values across subjects
+    figure();
+    pl = subplot(1,1,1);
+    plot(oX, oY, 'ob', 'MarkerSize', 10);
+    fitObj = fitlm(oX,oY,'RobustOpts', 'on');
+% % %     hold on
+%     plot(oX,fitObj.Fitted,'-r')
+    plot(fitObj);
+    plot((-2:14),(-2:14),'k');
+    pl.Box = 'off';
+    rsquare = fitObj.Rsquared.Ordinary;
+    if rsquare > 1 || rsquare < 0
+        rsquare = nan;
+    end
+    title([varNamesToPlot{vv} ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+    xlabel(['Offset'], 'FontSize', 16)
+    ylabel(['Offset'], 'FontSize', 16)
+    ylim(xlim);
+    axis(pl, 'square');
+    
 end
 
 %% 2 by 2 test retest slope or offset plots
-
 figure();
 
 for vv = 1:length(varNamesToPlot)
@@ -220,101 +248,111 @@ for vv = 1:length(varNamesToPlot)
         pY(end+1) = fitObj.Coefficients.Estimate(2);
     end
     
-    % plot test retest values across subjects
+    % Bland-Altman Analysis
     if offset
-        pl = subplot(2,2,vv);
-        plot(oX, oY, 'ob', 'MarkerSize', 10, 'MarkerEdgeColor','red');
-        fitObj = fitlm(oX,oY,'RobustOpts', 'on');
-        hold on
-        plot(oX,fitObj.Fitted);
-        pl.Box = 'off';
-        rsquare = fitObj.Rsquared.Ordinary;
-        if rsquare > 1 || rsquare < 0
-            rsquare = nan;
-        end
-        title([varNamesToPlot{vv} ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-        xlabel(['Offset'], 'FontSize', 16)
-        ylabel(['Offset'], 'FontSize', 16)
-        axis(pl, 'square');
-        ylim(xlim);
-        yticklabels("");
-        xticklabels("");
-        xticks([]);
-        yticks([]);
-    else
-        pl = subplot(2,2,vv);
-        plot(pX, pY,'ob', 'MarkerSize', 10, 'MarkerEdgeColor','red');
-        fitObj = fitlm(pX,pY,'RobustOpts', 'on');
-        hold on
-        plot(pX,fitObj.Fitted);
-        pl.Box = 'off';
-        rsquare = fitObj.Rsquared.Ordinary;
-        if rsquare > 1 || rsquare < 0
-            rsquare = nan;
-        end
-        title([varNamesToPlot{vv} ' slope by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-        xlabel(['Slope'], 'FontSize', 16)
-        ylabel(['Slope'], 'FontSize', 16)
-        axis(pl, 'square');
-        ylim(xlim);
-    end
-    
-end
-
-%% slope vs offset
-
-figure();
-
-for vv = 1:length(varNamesToPlot)
-    
-    oY = [];
-    pX = [];
-    
-    for ss = 1:length(subList)
-
-        % find scans for desired subject
-        scans = T(ismember(T.subjectID,subList{ss}),:);
-        scans = scans(ismember(scans.valid,'TRUE'),:);
-
-        % separate scans into a table for each of the sessions
-        if highestOnly
-           A = scans(ismember(scans.intendedPSI, 15),:);
-           B = scans(ismember(scans.intendedPSI, 30),:);
-           C = scans(ismember(scans.intendedPSI, 60),:);
-           scans = vertcat(A, B, C);
-        end
-        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
-
-        % subject data
-        y = scans.(allVarNames{ii});
-        goodPoints = ~isnan(y);
-        x = log10(scans.PSI);
-        x = x(goodPoints);
-        y = y(goodPoints);
-        [x,idxX]=sort(x);
-        y = y(idxX);
-        weights = scans.numIpsi;
-        mSize = weights*20;
-        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
-        oY(end+1) = fitObj.Coefficients.Estimate(1);
-        pX(end+1) = fitObj.Coefficients.Estimate(2);
+%         pl = subplot(2,2,vv);
         
+        % get BA stats
+        differences = oX - oY;
+        meanD = mean(differences,'omitnan');
+        meanO = (oX + oY) ./ 2;
+        
+        % get IQR
+        range = iqr(differences);
+        low = meanD - 0.5*range;
+        high = meanD + 0.5*range;
+        
+        % plot stats
+        scatter(meanO, differences, 150, 'MarkerEdgeColor', 'r');
+        hold on
+        yline(meanD,'-',num2str(meanD));
+        yline(low,'--',num2str(low));
+        yline(high,'--',num2str(high));
+        title([varNamesToPlot{vv}], 'FontSize', 16)
+        xlabel(['Mean offset'], 'FontSize', 16)
+        ylabel(['Offset difference'], 'FontSize', 16)
+        axis(pl, 'square');
+    else
+%         pl = subplot(2,2,vv);
+        
+        % get BA stats
+        differences = pX - pY;
+        meanD = mean(differences,'omitnan');
+        meanO = (pX + pY) ./ 2;
+        
+        % get IQR
+        range = iqr(differences);
+        low = meanD - 0.5*range;
+        high = meanD + 0.5*range;
+        
+        % plot stats
+        scatter(meanO, differences, 150, 'MarkerEdgeColor', 'r');
+        hold on
+        yline(meanD,'-',num2str(meanD));
+        yline(low,'--',num2str(low));
+        yline(high,'--',num2str(high));
+        title([varNamesToPlot{vv}], 'FontSize', 16)
+        xlabel(['Mean slope'], 'FontSize', 16)
+        ylabel(['Slope difference'], 'FontSize', 16)
+        axis(pl, 'square');
     end
-    
-    % plot offset vs slope test retest values across subjects
-    pl = subplot(2,length(varNamesToPlot)/2,vv);
-    plot(pX, oY, 'ob', 'MarkerSize', 10);
-    fitObj = fitlm(pX,oY,'RobustOpts', 'on');
-    hold on
-    plot(pX,fitObj.Fitted,'-r')
-    pl.Box = 'off';
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
-    end
-    title([varNamesToPlot{vv} ' offset vs slope across subjects - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-    xlabel(['Slope'], 'FontSize', 16)
-    ylabel(['Offset'], 'FontSize', 16)
-    axis(pl, 'square');
     
 end
+
+% %% slope vs offset
+% 
+% figure();
+% 
+% for vv = 1:length(varNamesToPlot)
+%     
+%     oY = [];
+%     pX = [];
+%     
+%     for ss = 1:length(subList)
+% 
+%         % find scans for desired subject
+%         scans = T(ismember(T.subjectID,subList{ss}),:);
+%         scans = scans(ismember(scans.valid,'TRUE'),:);
+% 
+%         % separate scans into a table for each of the sessions
+%         if highestOnly
+%            A = scans(ismember(scans.intendedPSI, 15),:);
+%            B = scans(ismember(scans.intendedPSI, 30),:);
+%            C = scans(ismember(scans.intendedPSI, 60),:);
+%            scans = vertcat(A, B, C);
+%         end
+%         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+% 
+%         % subject data
+%         y = scans.(allVarNames{ii});
+%         goodPoints = ~isnan(y);
+%         x = log10(scans.PSI);
+%         x = x(goodPoints);
+%         y = y(goodPoints);
+%         [x,idxX]=sort(x);
+%         y = y(idxX);
+%         weights = scans.numIpsi;
+%         mSize = weights*20;
+%         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
+%         oY(end+1) = fitObj.Coefficients.Estimate(1);
+%         pX(end+1) = fitObj.Coefficients.Estimate(2);
+%         
+%     end
+%     
+%     % plot offset vs slope test retest values across subjects
+%     pl = subplot(2,length(varNamesToPlot)/2,vv);
+%     plot(pX, oY, 'ob', 'MarkerSize', 10);
+%     fitObj = fitlm(pX,oY,'RobustOpts', 'on');
+%     hold on
+%     plot(pX,fitObj.Fitted,'-r')
+%     pl.Box = 'off';
+%     rsquare = fitObj.Rsquared.Ordinary;
+%     if rsquare > 1 || rsquare < 0
+%         rsquare = nan;
+%     end
+%     title([varNamesToPlot{vv} ' offset vs slope across subjects - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+%     xlabel(['Slope'], 'FontSize', 16)
+%     ylabel(['Offset'], 'FontSize', 16)
+%     axis(pl, 'square');
+%     
+% end
