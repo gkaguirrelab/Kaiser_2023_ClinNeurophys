@@ -9,7 +9,8 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
-subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591};
+subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14587, 14586};
 varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
 
