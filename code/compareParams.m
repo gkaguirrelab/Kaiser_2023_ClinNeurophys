@@ -2,7 +2,7 @@
 % This script loads a blink data set into a MATLAB table variable. When
 % run, it will aggregate data for a given subject for the given parameters 
 % across sessions. It will create a matrix of slopes for each parameter.
-%%
+clear all
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
@@ -26,6 +26,9 @@ allVarNames = T.Properties.VariableNames;
 slopes = zeros(length(subList), length(varNamesToPlot));
 slopesSessOne = zeros(length(subList), length(varNamesToPlot));
 slopesSessTwo = zeros(length(subList), length(varNamesToPlot));
+offsets = zeros(length(subList), length(varNamesToPlot));
+offsetsSessOne = zeros(length(subList), length(varNamesToPlot));
+offsetsSessTwo = zeros(length(subList), length(varNamesToPlot));
 
 %% create slopes matrix containing the slope values for each var and subject
 for vv = 1:length(varNamesToPlot)
@@ -59,6 +62,7 @@ for vv = 1:length(varNamesToPlot)
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         slopes(ss, vv) = fitObj.Coefficients.Estimate(2);
+        offsets(ss,vv) = fitObj.Coefficients.Estimate(1); 
         
         % subject parameter data session 1
         y = sessOne.(allVarNames{ii});
@@ -69,7 +73,8 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessOne);
-        slopesSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2);
+        slopesSessOne(ss, vv) = fitObj.Coefficients.Estimate(2);
+        offsetsSessOne(ss,vv) = fitObj.Coefficients.Estimate(1); 
         
         % subject parameter data session 2
         y = sessTwo.(allVarNames{ii});
@@ -80,88 +85,146 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessTwo);
-        slopesSessOne(ss, vv) = fitObj.Coefficients.Estimate(2);
-
+        slopesSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2);
+        offsetsSessTwo(ss, vv) = fitObj.Coefficients.Estimate(1);    
     end
 
 end
 
 comp = corr(slopes);
 
-%% Perform a PCA analysis after standardizing the slope measures
-X = (slopes-mean(slopes))./std(slopes);
-[coeff,score,latent,tsquared,explained,mu] = pca(X);
-figure
-plot(explained)
-xlabel('component'); ylabel('percent variance explained');
-figure
-biplot(coeff(:,1:2),'scores',score(:,1:2),'varLabels',varNamesToPlot)
-axis equal
-figure
-scatter3(score(:,1),score(:,2),score(:,3),'or')
-axis equal
-xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
+%% Perform a PCA
+% Save measurements and names in cells
+allMeasures = {slopes, offsets; ...
+               slopesSessOne, slopesSessTwo; ...
+               offsetsSessOne, offsetsSessTwo};
+allMeasureNames = {'Slopes', 'Offsets', ... 
+                   'slopesSessOne', 'slopesSessTwo', ...
+                   'offsetsSessOne', 'offsetsSessTwo'};
+             
+% Initialize figures                
+figure1 = figure();
+figure2 = figure();
+plotCounter = 1;
+plotCounter2 = 1;
 
-%% PC1 correlation between session 1 and session 2
+% Do the PCA analysis, save a pcaResults struct and plot some diagnostics 
+for ii = 1:2
+    % Do PCA with the aggregate measurements
+    standardized = (allMeasures{1,ii}-mean(allMeasures{1,ii}))./std(allMeasures{1,ii});
+    [coeff,score,latent,tsquared,explained,mu] = pca(standardized);
+    
+    % Save PCA results to a structure
+    pcaResults.(['variable' allMeasureNames{1,ii}]).('coeff') = coeff;
+    pcaResults.(['variable' allMeasureNames{1,ii}]).('score') = score;
+    
+    % Plot the PCA related stuff 
+    set(0,'CurrentFigure',figure1)
+    subplot(2, 3, plotCounter)
+    plot(explained)
+    xlabel('component'); ylabel('percent variance explained');
+    title(allMeasureNames{1,ii})
+    subplot(2, 3, plotCounter+1)
+    biplot(coeff(:,1:2),'scores',score(:,1:2),'varLabels',varNamesToPlot)
+    title(allMeasureNames{1,ii})
+    axis equal
+    subplot(2, 3, plotCounter+2)
+    scatter3(score(:,1),score(:,2),score(:,3),'or')
+    axis square
+    title(allMeasureNames{1,ii})
+    xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
+    
+    % Project the individual sessions to PCA 
+    sessionOneStandard = (allMeasures{ii+1,1}-mean(allMeasures{ii+1,1}))./std(allMeasures{ii+1,1});
+    sessionTwoStandard = (allMeasures{ii+1,2}-mean(allMeasures{ii+1,2}))./std(allMeasures{ii+1,2});
+    sessionOneProjected = sessionOneStandard*coeff(:,1:2);
+    sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);    
 
-weights = abs(coeff(:,1)');
+    set(0,'CurrentFigure',figure2) 
+    subplot(2,2,plotCounter2)
+    scatter(sessionOneProjected(:,1), sessionTwoProjected(:,1), 'MarkerFaceColor', 'b')
+    xlabel('Session 1 projected onto PC1')
+    ylabel('Session 2 projected onto PC1')
+    title(allMeasureNames{ii})
+    axis equal
+    xlim([-4 4])
+    ylim([-4 4])
+    axis square
 
-% get session one scores
-sO = (slopesSessOne-mean(slopesSessOne))./std(slopesSessOne);
-[coeff,score,latent,tsquared,explained,mu] = pca(sO, 'VariableWeights', weights);
-xx = score(:,1);
-
-% get session two scores
-sT = (slopesSessTwo-mean(slopesSessTwo))./std(slopesSessTwo);
-[coeff,score,latent,tsquared,explained,mu] = pca(sT, 'VariableWeights', weights);
-yy = score(:,1);
-
-figure();
-scatter(xx,yy)
-fitObj = fitlm(xx,yy,'RobustOpts', 'on');
-hold on
-plot(xx,fitObj.Fitted,'-r')
-rsquare = fitObj.Rsquared.Ordinary;
-if rsquare > 1 || rsquare < 0
-    rsquare = nan;
+    subplot(2,2,plotCounter2+1)
+    scatter(sessionOneProjected(:,2), sessionTwoProjected(:,2), 'MarkerFaceColor', 'b')
+    xlabel('Session 1 projected onto PC2')
+    ylabel('Session 2 projected onto PC2')
+    title(allMeasureNames{ii})    
+    axis equal
+    xlim([-4 4])
+    ylim([-4 4])
+    axis square    
+    
+    plotCounter = plotCounter + 3;
+    plotCounter2 = plotCounter2 + 2;    
 end
-title(['PC1 scores by session - ' sprintf(' R^2=%2.2f',rsquare)])
-xlabel(['Session one'])
-ylabel(['Session two'])
-axis square
-ylim(xlim)
 
-%% compare scores to slopes
-
-figure();
-plotNum = 1;
-
-for vv = 1:length(varNamesToPlot)
-    subplot(2, length(varNamesToPlot), plotNum)
-    scatter(xx,slopesSessOne(:,vv))
-    fitObj = fitlm(xx,slopesSessOne(:,vv),'RobustOpts', 'on');
-    hold on
-    plot(xx,fitObj.Fitted,'-r')
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
-    end
-    title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
-    xlabel(['Session one PC1 scores'])
-    ylabel(['Session one slopes'])
-
-    subplot(2, length(varNamesToPlot), plotNum + length(varNamesToPlot))
-    scatter(yy,slopesSessTwo(:,vv))
-    fitObj = fitlm(yy,slopesSessTwo(:,vv),'RobustOpts', 'on');
-    hold on
-    plot(yy,fitObj.Fitted,'-r')
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
-    end
-    title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
-    xlabel(['Session two PC1 scores'])
-    ylabel(['Session two slopes'])
-    plotNum = plotNum + 1;
-
-end
+% %% PC1 correlation between session 1 and session 2
+% 
+% weights = abs(coeff(:,1)');
+% 
+% % get session one scores
+% sO = (slopesSessOne-mean(slopesSessOne))./std(slopesSessOne);
+% [coeff,score,latent,tsquared,explained,mu] = pca(sO, 'VariableWeights', weights);
+% xx = score(:,1);
+% 
+% % get session two scores
+% sT = (slopesSessTwo-mean(slopesSessTwo))./std(slopesSessTwo);
+% [coeff,score,latent,tsquared,explained,mu] = pca(sT, 'VariableWeights', weights);
+% yy = score(:,1);
+% 
+% figure();
+% scatter(xx,yy)
+% fitObj = fitlm(xx,yy,'RobustOpts', 'on');
+% hold on
+% plot(xx,fitObj.Fitted,'-r')
+% rsquare = fitObj.Rsquared.Ordinary;
+% if rsquare > 1 || rsquare < 0
+%     rsquare = nan;
+% end
+% title(['PC1 scores by session - ' sprintf(' R^2=%2.2f',rsquare)])
+% xlabel(['Session one'])
+% ylabel(['Session two'])
+% axis square
+% ylim(xlim)
+% 
+% %% compare scores to slopes
+% 
+% figure();
+% plotNum = 1;
+% 
+% for vv = 1:length(varNamesToPlot)
+%     subplot(2, length(varNamesToPlot), plotNum)
+%     scatter(xx,slopesSessOne(:,vv))
+%     fitObj = fitlm(xx,slopesSessOne(:,vv),'RobustOpts', 'on');
+%     hold on
+%     plot(xx,fitObj.Fitted,'-r')
+%     rsquare = fitObj.Rsquared.Ordinary;
+%     if rsquare > 1 || rsquare < 0
+%         rsquare = nan;
+%     end
+%     title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
+%     xlabel(['Session one PC1 scores'])
+%     ylabel(['Session one slopes'])
+% 
+%     subplot(2, length(varNamesToPlot), plotNum + length(varNamesToPlot))
+%     scatter(yy,slopesSessTwo(:,vv))
+%     fitObj = fitlm(yy,slopesSessTwo(:,vv),'RobustOpts', 'on');
+%     hold on
+%     plot(yy,fitObj.Fitted,'-r')
+%     rsquare = fitObj.Rsquared.Ordinary;
+%     if rsquare > 1 || rsquare < 0
+%         rsquare = nan;
+%     end
+%     title(['PC1 scores and ' varNamesToPlot(vv) ' - ' sprintf(' R^2=%2.2f',rsquare)])
+%     xlabel(['Session two PC1 scores'])
+%     ylabel(['Session two slopes'])
+%     plotNum = plotNum + 1;
+% 
+% end
