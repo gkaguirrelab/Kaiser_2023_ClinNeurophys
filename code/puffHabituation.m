@@ -474,93 +474,93 @@ end
 
 %% calculate and plot test-retest mean resuidual values by scan slopes
 
-figure();
-
-for vv = 1:length(varNamesToPlot)
-    
-    pX = [];
-    pY = [];
-    
-    for ss = 1:length(subList)
-        
-        acqMeans = NaN(1,25);
-        resMeansByAcq = NaN(1,25);
-        psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
-        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
-
-        % find scans for desired subject
-        scans = T(ismember(T.subjectID,subList{ss}),:);
-        scans = scans(ismember(scans.valid,'TRUE'),:);
-        dates = unique(scans.scanDate);
-        sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
-        sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
-
-        % get mean values and residuals for each scan session one
-        for zz = 1:25
-            temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);
-            if ~isempty(temp) 
-               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
-             end
-        end
-
-        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
-        modelY = fitObj.Fitted;
-
-        for zz = 1:25            
-            temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);            
-            if ~isempty(temp)
-                residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
-                resMeansByAcq(zz) = mean(residuals,'omitnan');
-            end            
-        end
-
-        % get session one slope
-        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
-        pY(end+1) = fitObj.Coefficients.Estimate(2);
-        
-        % get mean values and residuals for each scan session one
-        for zz = 1:25
-            temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);
-            if ~isempty(temp) 
-               acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
-             end
-        end
-
-        fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
-        modelY = fitObj.Fitted;
-
-        for zz = 1:25            
-            temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);            
-            if ~isempty(temp)
-                residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
-                resMeansByAcq(zz) = mean(residuals,'omitnan');
-            end            
-        end
-        
-        % get session two slope
-        fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
-        pX(end+1) = fitObj.Coefficients.Estimate(2);
-
-    end
-    
-    % plot slopes across subjects
-    pl = subplot(2,ceil(length(varNamesToPlot)/2),vv);
-    plot(pX, pY, 'ob', 'MarkerSize', 10);
-    fitObj = fitlm(pX,pY,'RobustOpts', 'on');
-    hold on
-    plot(pX,fitObj.Fitted,'-r')
-    pl.Box = 'off';
-    rsquare = fitObj.Rsquared.Ordinary;
-    if rsquare > 1 || rsquare < 0
-        rsquare = nan;
-    end
-    title([varNamesToPlot{vv} ' residual slope across acquisition'], [sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-    xlabel(['Session two slope'], 'FontSize', 16)
-    ylabel(['Session one slope'], 'FontSize', 16)
-    axis(pl, 'square');
-    ylim(xlim);
-    
-end
+% figure();
+% 
+% for vv = 1:length(varNamesToPlot)
+%     
+%     pX = [];
+%     pY = [];
+%     
+%     for ss = 1:length(subList)
+%         
+%         acqMeans = NaN(1,25);
+%         resMeansByAcq = NaN(1,25);
+%         psi = [30 3.75 15 60 60 15 3.75 7.5 30 7.5 7.5 3.75 60 30 15 15 30 60 7.5 15 7.5 60 3.75 3.75 30];
+%         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+% 
+%         % find scans for desired subject
+%         scans = T(ismember(T.subjectID,subList{ss}),:);
+%         scans = scans(ismember(scans.valid,'TRUE'),:);
+%         dates = unique(scans.scanDate);
+%         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
+%         sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
+% 
+%         % get mean values and residuals for each scan session one
+%         for zz = 1:25
+%             temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);
+%             if ~isempty(temp) 
+%                acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
+%              end
+%         end
+% 
+%         fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+%         modelY = fitObj.Fitted;
+% 
+%         for zz = 1:25            
+%             temp = sessOne(ismember(sessOne.scanNumber, zz+1),:);            
+%             if ~isempty(temp)
+%                 residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
+%                 resMeansByAcq(zz) = mean(residuals,'omitnan');
+%             end            
+%         end
+% 
+%         % get session one slope
+%         fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
+%         pY(end+1) = fitObj.Coefficients.Estimate(2);
+%         
+%         % get mean values and residuals for each scan session one
+%         for zz = 1:25
+%             temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);
+%             if ~isempty(temp) 
+%                acqMeans(zz) = mean(temp.(varNamesToPlot{vv}), 'omitnan');
+%              end
+%         end
+% 
+%         fitObj = fitlm(log10(psi),acqMeans,'RobustOpts', 'on');
+%         modelY = fitObj.Fitted;
+% 
+%         for zz = 1:25            
+%             temp = sessTwo(ismember(sessTwo.scanNumber, zz+1),:);            
+%             if ~isempty(temp)
+%                 residuals = temp.(varNamesToPlot{vv})' - modelY(zz);
+%                 resMeansByAcq(zz) = mean(residuals,'omitnan');
+%             end            
+%         end
+%         
+%         % get session two slope
+%         fitObj = fitlm((1:25),resMeansByAcq,'RobustOpts', 'on');
+%         pX(end+1) = fitObj.Coefficients.Estimate(2);
+% 
+%     end
+%     
+%     % plot slopes across subjects
+%     pl = subplot(2,ceil(length(varNamesToPlot)/2),vv);
+%     plot(pX, pY, 'ob', 'MarkerSize', 10);
+%     fitObj = fitlm(pX,pY,'RobustOpts', 'on');
+%     hold on
+%     plot(pX,fitObj.Fitted,'-r')
+%     pl.Box = 'off';
+%     rsquare = fitObj.Rsquared.Ordinary;
+%     if rsquare > 1 || rsquare < 0
+%         rsquare = nan;
+%     end
+%     title([varNamesToPlot{vv} ' residual slope across acquisition'], [sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+%     xlabel(['Session two slope'], 'FontSize', 16)
+%     ylabel(['Session one slope'], 'FontSize', 16)
+%     axis(pl, 'square');
+%     ylim(xlim);
+%     
+% end
 
 %% calculate and plot test-retest mean resuidual values by trial slopes
 
