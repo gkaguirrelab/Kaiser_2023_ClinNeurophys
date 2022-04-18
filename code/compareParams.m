@@ -18,7 +18,7 @@ else
     14587, 14586};
 end
 varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
-    'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
+     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'blinkRate'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
