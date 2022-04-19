@@ -7,11 +7,11 @@
 subject = 14591;
 location = strcat('/Users/brianahaggerty/Documents/MATLAB/projects/blinkCNSAnalysis/data/iFiles/', num2str(subject),'/');
 dir(location);
-ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
-ds.ReadSize = 'file';
 
 
 %% plot stimulus arrival time as a function of puff pressure
+ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
+ds.ReadSize = 'file';
 x = [];
 y = [];
 
@@ -74,3 +74,55 @@ xlim(log10([2 100]));
 title('Stimulus arrival time across puff pressure', 'FontSize', 16);
 xlabel(['Puff pressure [log psi]'], 'FontSize', 16);
 ylabel(['Time [msec]'], 'FontSize', 16);
+
+%% plot time series of single scan
+ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
+ds.ReadSize = 'file';
+scanNum = 5;
+x = [];
+y = [];
+
+% loop through scan files
+for ii = 1:52
+   % make table from file
+   [data,info] = read(ds);
+   T = data;
+   subStr = eraseBetween(info.Filename,1,102);
+   subStr = extractBetween(subStr,"_",".csv");
+   scan = str2num(subStr{1});
+   allVarNames = T.Properties.VariableNames;
+   
+   if scan == scanNum
+       % find stimulus onsets
+       [rights,col,v] = find(strcmp('MC-OD',T.Stimulus(:,1)));
+       [lefts,col,v] = find(strcmp('MC-OS',T.Stimulus(:,1)));
+       all = sort(cat(1,rights,lefts));
+       
+       % get times
+       starts = all - 150;
+       ends = all + 700;
+       time = table2array(T(starts(1):ends(1),1));
+       time = time - time(1);
+       
+       % get means across trials
+       pos = [];
+       for jj = 1:length(starts)
+           temp = T(starts(jj):ends(jj),:);
+           if ismember(all(jj),rights)
+               pos(:,end+1) = table2array(temp(:,3))';
+           else
+               pos(:,end+1) = table2array(temp(:,4))';
+           end
+       end
+       pos = mean(pos,2);
+   end
+end
+
+figure();
+plot(time,pos);
+xline(all(1),'-','Stimulus arrival');
+title('Average eyelid position across trials in an acquisition', 'FontSize', 16);
+xlabel(['Time [msec]'], 'FontSize', 16);
+ylabel(['Eyelid position [px]'], 'FontSize', 16);
+xlim([time(1) time(end)]);
+ylim("padded");
