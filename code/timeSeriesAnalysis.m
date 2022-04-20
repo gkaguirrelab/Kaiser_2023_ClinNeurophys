@@ -16,6 +16,10 @@ psiArray(:,3) = [4 7 16 17 21 30 33 42 43 47];
 psiArray(:,4) = [2 10 15 18 26 28 36 41 44 52];
 psiArray(:,5) = [5 6 14 19 23 31 32 40 45 49];
 psi = ["3.5" "7.5" "15" "30" "60"];
+
+% decide row bounds
+numBefore = 60;
+numAfter = 700;
        
 %% plot stimulus arrival time as a function of puff pressure
 ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
@@ -34,10 +38,10 @@ for ii = 1:52
    allVarNames = T.Properties.VariableNames;
    
    % find stimulus arrival
-   start = vertcat(T(ismember(T.Stimulus,'TA-OD'),:), T(ismember(T.Stimulus,'TA-OS'),:));
-   arrivals = vertcat(T(ismember(T.Stimulus,'MC-OD'),:), T(ismember(T.Stimulus,'MC-OS'),:));
-   tEnd = table2array(arrivals(:,1));
-   tStart = table2array(start(:,1));
+   onset = vertcat(T(ismember(T.Stimulus,'TA-OD'),:), T(ismember(T.Stimulus,'TA-OS'),:));
+   arrival = vertcat(T(ismember(T.Stimulus,'MC-OD'),:), T(ismember(T.Stimulus,'MC-OS'),:));
+   tEnd = table2array(arrival(:,1));
+   tStart = table2array(onset(:,1));
    
    if ismember(scan, [3 8 13 24 25 29 34 39 50 51])
        % 3.5 PSI
@@ -102,16 +106,16 @@ for ii = 1:52
    allVarNames = T.Properties.VariableNames;
    
    if scan == scanNum
-       % find stimulus onsets
+       % find stimulus arrivals
        [rights,col,v] = find(strcmp('MC-OD',T.Stimulus(:,1)));
        [lefts,col,v] = find(strcmp('MC-OS',T.Stimulus(:,1)));
        all = sort(cat(1,rights,lefts));
        
        % get times
-       starts = all - 150;
-       ends = all + 700;
+       starts = all - numBefore;
+       ends = all + numAfter;
        time = table2array(T(starts(1):ends(1),1));
-       time = time - time(1);
+       time = time - time(numBefore + 1);
        
        % get means across trials
        pos = [];
@@ -124,27 +128,42 @@ for ii = 1:52
            end
        end
        pos = mean(pos,2);
-       allMean = mean(pos);
-       pos = pos - allMean;
+       
+       % center pre-stimulus around zero
+       pre = pos(1:numBefore);
+       mm = mean(pre);
+       pos = pos - mm;
    end
 end
 
+% calculate velocity plot
+dt = time;
+dt(1) = [];
+vel = diff(pos);
+
+% center pre-stimulus velocity around zero
+pre = vel(1:numBefore);
+mm = mean(pre);
+vel = vel - mm;
+
 figure();
-plot(time,pos);
+plot(time,pos,'-k');
 hold on
-xl = xline(time(151),'-','Stimulus arrival');
+xl = xline(time(numBefore + 1),'-k','Stimulus arrival');
 xl.LabelVerticalAlignment = 'bottom';
 xl.LabelHorizontalAlignment = 'left';
 title('Average eyelid position across trials in an acquisition', 'FontSize', 16);
 xlabel(['Time [msec]'], 'FontSize', 16);
 ylabel(['Eyelid position [px]'], 'FontSize', 16);
+ylim([-300 100]);
 yyaxis right
-dt = time;
-dt(1) = [];
-plot(dt,diff(posMean));
+plot(dt,vel,'-r');
 ylabel(['Velocity [px/msec]'], 'FontSize', 16);
-xlim([time(1) time(end)]);
-ylim("padded");
+ylim([-30 10]);
+xmin = time(1);
+xmax = time(1) + 1250;
+xticks([0 250 500 750 1000])
+xlim([xmin xmax]);
 hold off
 
 %% plot time series for each PSI
@@ -168,21 +187,21 @@ for pp = 1:5
        allVarNames = T.Properties.VariableNames;
 
        if ismember(scan,psiArray(:,pp))
-           % find stimulus onsets
+           % find stimulus arrivals
            [rights,col,v] = find(strcmp('MC-OD',T.Stimulus(:,1)));
            [lefts,col,v] = find(strcmp('MC-OS',T.Stimulus(:,1)));
            all = sort(cat(1,rights,lefts));
 
            % get starting and ending rows
-           starts = all - 150;
-           ends = all + 700;
+           starts = all - numBefore;
+           ends = all + numAfter;
            if starts(1) < 1
                all(1) = [];
                starts(1) = [];
                ends(1) = [];
            end
            time = table2array(T(starts(1):ends(1),1));
-           time = time - time(1);
+           time = time - time(numBefore + 1);
 
            % get means across trials
            for jj = 1:length(starts)
@@ -196,23 +215,31 @@ for pp = 1:5
        end
     end
     
-    posMean = mean(pos,2);
-    allMean = mean(posMean);
-    posMean = posMean - allMean;
+    % get mean across acquisitions
+    pos = mean(pos,2);
+    
+    % center pre-stimulus around zero
+    pre = pos(1:numBefore);
+    mm = mean(pre);
+    pos = pos - mm;
     
     % plot time series
-    plot(time,posMean);
+    plot(time,pos,'-k');
     hold on
     if pp == 1
-        xl = xline(time(151),'-','Stimulus arrival');
+        xl = xline(time(numBefore + 1),'-k','Stimulus arrival');
         xl.LabelVerticalAlignment = 'bottom';
         xl.LabelHorizontalAlignment = 'left';        
     end
     title(['Average eyelid position across trials'], 'FontSize', 16);
     xlabel(['Time [msec]'], 'FontSize', 16);
     ylabel(['Eyelid position [px]'], 'FontSize', 16);
-    xlim([time(1) time(end)]);
-    ylim("padded");
+    xmin = time(1);
+    xmax = time(1) + 1250;
+    xlim([xmin xmax]);
+    xticks([0 250 500 750 1000])
+    ylim([-300 100]);
     legend('3.5 PSI', '', '7.5 PSI', '15 PSI', '30 PSI', '60 PSI', 'Location', 'southeast');
+    colormap(gray);
     
 end
