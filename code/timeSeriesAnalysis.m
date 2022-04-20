@@ -8,7 +8,15 @@ subject = 14591;
 location = strcat('/Users/brianahaggerty/Documents/MATLAB/projects/blinkCNSAnalysis/data/iFiles/', num2str(subject),'/');
 dir(location);
 
-
+% define scan numbers at each PSI level
+psiArray = [];
+psiArray(:,1) = [3 8 13 24 25 29 34 39 50 51];
+psiArray(:,2) = [9 11 12 20 22 35 37 38 46 48];
+psiArray(:,3) = [4 7 16 17 21 30 33 42 43 47];
+psiArray(:,4) = [2 10 15 18 26 28 36 41 44 52];
+psiArray(:,5) = [5 6 14 19 23 31 32 40 45 49];
+psi = ["3.5" "7.5" "15" "30" "60"];
+       
 %% plot stimulus arrival time as a function of puff pressure
 ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
 ds.ReadSize = 'file';
@@ -31,7 +39,7 @@ for ii = 1:52
    tEnd = table2array(arrivals(:,1));
    tStart = table2array(start(:,1));
    
-   if ismember(scan, [3 8 13 24 25 29 34 38 50 51])
+   if ismember(scan, [3 8 13 24 25 29 34 39 50 51])
        % 3.5 PSI
        for jj = 1:length(tEnd)
            x(end+1) = 3.5;
@@ -74,8 +82,9 @@ xlim(log10([2 100]));
 title('Stimulus arrival time across puff pressure', 'FontSize', 16);
 xlabel(['Puff pressure [log psi]'], 'FontSize', 16);
 ylabel(['Time [msec]'], 'FontSize', 16);
+hold off
 
-%% plot time series of single scan
+%% plot time series example from single scan
 ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
 ds.ReadSize = 'file';
 scanNum = 5;
@@ -115,14 +124,95 @@ for ii = 1:52
            end
        end
        pos = mean(pos,2);
+       allMean = mean(pos);
+       pos = pos - allMean;
    end
 end
 
 figure();
 plot(time,pos);
-xline(all(1),'-','Stimulus arrival');
+hold on
+xl = xline(time(151),'-','Stimulus arrival');
+xl.LabelVerticalAlignment = 'bottom';
+xl.LabelHorizontalAlignment = 'left';
 title('Average eyelid position across trials in an acquisition', 'FontSize', 16);
 xlabel(['Time [msec]'], 'FontSize', 16);
 ylabel(['Eyelid position [px]'], 'FontSize', 16);
+yyaxis right
+dt = time;
+dt(1) = [];
+plot(dt,diff(posMean));
+ylabel(['Velocity [px/msec]'], 'FontSize', 16);
 xlim([time(1) time(end)]);
 ylim("padded");
+hold off
+
+%% plot time series for each PSI
+figure();
+
+for pp = 1:5
+    ds = tabularTextDatastore(location,'FileExtensions',[".csv"]);
+    ds.ReadSize = 'file';
+    x = [];
+    y = [];
+    pos = [];
+    
+    % loop through scan files
+    for ii = 1:52
+       % make table from file
+       [data,info] = read(ds);
+       T = data;
+       subStr = eraseBetween(info.Filename,1,102);
+       subStr = extractBetween(subStr,"_",".csv");
+       scan = str2num(subStr{1});
+       allVarNames = T.Properties.VariableNames;
+
+       if ismember(scan,psiArray(:,pp))
+           % find stimulus onsets
+           [rights,col,v] = find(strcmp('MC-OD',T.Stimulus(:,1)));
+           [lefts,col,v] = find(strcmp('MC-OS',T.Stimulus(:,1)));
+           all = sort(cat(1,rights,lefts));
+
+           % get starting and ending rows
+           starts = all - 150;
+           ends = all + 700;
+           if starts(1) < 1
+               all(1) = [];
+               starts(1) = [];
+               ends(1) = [];
+           end
+           time = table2array(T(starts(1):ends(1),1));
+           time = time - time(1);
+
+           % get means across trials
+           for jj = 1:length(starts)
+               temp = T(starts(jj):ends(jj),:);
+               if ismember(all(jj),rights)
+                   pos(:,end+1) = table2array(temp(:,3))';
+               else
+                   pos(:,end+1) = table2array(temp(:,4))';
+               end
+           end
+       end
+    end
+    
+    posMean = mean(pos,2);
+    allMean = mean(posMean);
+    posMean = posMean - allMean;
+    
+    % plot time series
+    plot(time,posMean);
+    hold on
+    if pp == 1
+        xl = xline(time(151),'-','Stimulus arrival');
+        xl.LabelVerticalAlignment = 'bottom';
+        xl.LabelHorizontalAlignment = 'left';        
+    end
+    title(['Average eyelid position across trials'], 'FontSize', 16);
+    xlabel(['Time [msec]'], 'FontSize', 16);
+    ylabel(['Eyelid position [px]'], 'FontSize', 16);
+    xlim([time(1) time(end)]);
+    ylim("padded");
+    legend('3.5 PSI', '', '7.5 PSI', '15 PSI', '30 PSI', '60 PSI', 'Location', 'southeast');
+    
+end
