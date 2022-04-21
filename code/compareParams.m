@@ -103,10 +103,11 @@ allMeasureNames = {'Slopes', 'Offsets', ...
                    'offsetsSessOne', 'offsetsSessTwo'};
              
 % Initialize figures                
-figure1 = figure();
-figure2 = figure();
+figure1 = figure('Renderer', 'painters', 'Position', [164 71 1401 891]);
+figure2 = figure('Renderer', 'painters', 'Position', [164 71 1401 891]);
 plotCounter = 1;
 plotCounter2 = 1;
+combinedSessions = [];
 
 % Do the PCA analysis, save a pcaResults struct and plot some diagnostics 
 for ii = 1:2
@@ -139,10 +140,14 @@ for ii = 1:2
     sessionTwoStandard = (allMeasures{ii+1,2}-mean(allMeasures{ii+1,2}))./std(allMeasures{ii+1,2});
     sessionOneProjected = sessionOneStandard*coeff(:,1:2);
     sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);    
-
+    combined = [sessionOneProjected sessionTwoProjected];
+    combinedSessions = [combinedSessions; combined];
+    
     set(0,'CurrentFigure',figure2) 
     subplot(2,2,plotCounter2)
-    scatter(sessionOneProjected(:,1), sessionTwoProjected(:,1), 'MarkerFaceColor', 'b')
+    mdl = fitlm(sessionOneProjected(:,1), sessionTwoProjected(:,1));
+    plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b')
+    legend off
     xlabel('Session 1 projected onto PC1')
     ylabel('Session 2 projected onto PC1')
     title(allMeasureNames{ii})
@@ -152,7 +157,9 @@ for ii = 1:2
     axis square
 
     subplot(2,2,plotCounter2+1)
-    scatter(sessionOneProjected(:,2), sessionTwoProjected(:,2), 'MarkerFaceColor', 'b')
+    mdl = fitlm(sessionOneProjected(:,2), sessionTwoProjected(:,2));
+    plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b')
+    legend off
     xlabel('Session 1 projected onto PC2')
     ylabel('Session 2 projected onto PC2')
     title(allMeasureNames{ii})    
@@ -164,6 +171,32 @@ for ii = 1:2
     plotCounter = plotCounter + 3;
     plotCounter2 = plotCounter2 + 2;    
 end
+
+% Combine session one and two projected to make one test/retest plot
+figure('Renderer', 'painters', 'Position', [164 71 1401 891])
+subplot(1, 2, 1)
+mdl = fitlm(combinedSessions(:,1), combinedSessions(:,3));
+plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b');
+legend off
+title('Test/retest reliability for slopes and offset combined (PC1)')
+xlabel('Session 1')
+ylabel('Session 2')
+axis equal
+xlim([-4 4])
+ylim([-4 4])
+axis square 
+subplot(1, 2, 2)
+mdl = fitlm(combinedSessions(:,2), combinedSessions(:,4));
+plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b')
+legend off
+title('Test/retest reliability for slopes and offset combined (PC2)')
+xlabel('Session 1')
+ylabel('Session 2')
+axis equal
+xlim([-4 4])
+ylim([-4 4])
+axis square 
+
 
 % %% PC1 correlation between session 1 and session 2
 % 
