@@ -93,7 +93,12 @@ end
 
 comp = corr(slopes);
 
-%% Perform a PCA
+%% Make test-retest analysis.
+
+% First we do 2 PCA analyses on the slope and offset session aggregate 
+% variables. We then project session 1 and session 2 vectors onto the PC1 
+% and PC2 vectors and correlate their new scores.
+
 % Save measurements and names in cells
 allMeasures = {slopes, offsets; ...
                slopesSessOne, slopesSessTwo; ...
@@ -197,6 +202,31 @@ xlim([-4 4])
 ylim([-4 4])
 axis square 
 
+%% Do a PCA correlation on the combined slopes and offsets
+slopesAndOffsets = [slopes offsets];
+slopesAndOffsets = (slopesAndOffsets-mean(slopesAndOffsets))./std(slopesAndOffsets);
+[coeff,score,latent,tsquared,explained,mu] = pca(slopesAndOffsets);
+
+newVarNamesToPlot = {'Slope_aucI', 'Slope_latencyI', 'Slope_timeUnderI', 'Slope_openTimeI', 'Slope_initVelocityI', ...
+     'Slope_closeTimeI', 'Slope_maxClosingVelocityI', 'Slope_maxOpeningVelocityI', 'Slope_blinkRate', ...
+     'Offset_aucI', 'Offset_latencyI', 'Offset_timeUnderI', 'Offset_openTimeI', 'Offset_initVelocityI', ...
+     'Offset_closeTimeI', 'Offset_maxClosingVelocityI', 'Offset_maxOpeningVelocityI', 'Offset_blinkRate'};
+
+% Plot the results
+figure('Renderer', 'painters', 'Position', [164 71 1401 891])
+subplot(1, 3, 1)
+plot(explained)
+xlabel('component'); ylabel('percent variance explained');
+title('Variance explained for slope and offset combined')
+subplot(1, 3, 2)
+biplot(coeff(:,1:2),'scores',score(:,1:2),'varLabels',newVarNamesToPlot)
+title('Loadings for slope and offset combined')
+axis equal
+subplot(1, 3, 3)
+scatter3(score(:,1),score(:,2),score(:,3),'or')
+axis square
+title('Scores for variance explained')
+xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
 
 % %% PC1 correlation between session 1 and session 2
 % 
