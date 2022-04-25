@@ -205,7 +205,7 @@ axis square
 %% Do a PCA correlation on the combined slopes and offsets
 slopesAndOffsets = [slopes offsets];
 slopesAndOffsets = (slopesAndOffsets-mean(slopesAndOffsets))./std(slopesAndOffsets);
-[coeff,score,latent,tsquared,explained,mu] = pca(slopesAndOffsets);
+[slopeOffsetCoeff,slopeOffsetScore,latent,tsquared,explained,mu] = pca(slopesAndOffsets);
 
 newVarNamesToPlot = {'Slope_aucI', 'Slope_latencyI', 'Slope_timeUnderI', 'Slope_openTimeI', 'Slope_initVelocityI', ...
      'Slope_closeTimeI', 'Slope_maxClosingVelocityI', 'Slope_maxOpeningVelocityI', 'Slope_blinkRate', ...
@@ -219,11 +219,11 @@ plot(explained)
 xlabel('component'); ylabel('percent variance explained');
 title('Variance explained for slope and offset combined')
 subplot(1, 3, 2)
-biplot(coeff(:,1:2),'scores',score(:,1:2),'varLabels',newVarNamesToPlot)
+biplot(slopeOffsetCoeff(:,1:2),'scores',slopeOffsetScore(:,1:2),'varLabels',newVarNamesToPlot)
 title('Loadings for slope and offset combined')
 axis equal
 subplot(1, 3, 3)
-scatter3(score(:,1),score(:,2),score(:,3),'or')
+scatter3(slopeOffsetScore(:,1),slopeOffsetScore(:,2),slopeOffsetScore(:,3),'or')
 axis square
 title('Scores for variance explained')
 xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
