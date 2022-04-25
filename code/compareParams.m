@@ -62,7 +62,9 @@ for vv = 1:length(varNamesToPlot)
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         slopes(ss, vv) = fitObj.Coefficients.Estimate(2);
-        offsets(ss,vv) = fitObj.Coefficients.Estimate(1); 
+        
+        % Get the y value at median x and it will be our slope
+        offsets(ss,vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
         
         % subject parameter data session 1
         y = sessOne.(allVarNames{ii});
@@ -74,7 +76,7 @@ for vv = 1:length(varNamesToPlot)
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessOne);
         slopesSessOne(ss, vv) = fitObj.Coefficients.Estimate(2);
-        offsetsSessOne(ss,vv) = fitObj.Coefficients.Estimate(1); 
+        offsetsSessOne(ss,vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1); 
         
         % subject parameter data session 2
         y = sessTwo.(allVarNames{ii});
@@ -86,7 +88,7 @@ for vv = 1:length(varNamesToPlot)
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessTwo);
         slopesSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2);
-        offsetsSessTwo(ss, vv) = fitObj.Coefficients.Estimate(1);    
+        offsetsSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);    
     end
 
 end
