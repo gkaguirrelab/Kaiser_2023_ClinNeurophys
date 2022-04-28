@@ -274,7 +274,7 @@ for ss = 1:length(subList)
     % get session one slope and offset values
     fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
     pX(end+1) = fitObj.Coefficients.Estimate(2);
-    oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);;
+    oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
     rsquare = fitObj.Rsquared.Ordinary;
 
     % session two data

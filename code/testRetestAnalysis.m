@@ -12,9 +12,9 @@ spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
 % choose subject and parameters
 % varNamesToPlot = {'latencyI', 'aucI', 'openTimeI', 'closeTimeI'};
-% varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
-%      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'excursionI', 'closuresI'};
-varNamesToPlot = {'maxClosingVelocityI'};
+varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
+     'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'blinkRate'};
+% varNamesToPlot = {'maxClosingVelocityI'};
 highestOnly = true;
 if highestOnly
     subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
@@ -301,61 +301,59 @@ for vv = 1:length(varNamesToPlot)
     
 end
 
-% %% slope vs offset
-% 
-% figure();
-% 
-% for vv = 1:length(varNamesToPlot)
-%     
-%     oY = [];
-%     pX = [];
-%     
-%     for ss = 1:length(subList)
-% 
-%         % find scans for desired subject
-%         scans = T(ismember(T.subjectID,subList{ss}),:);
-%         scans = scans(ismember(scans.valid,'TRUE'),:);
-%         scans = scans(ismember(scans.numIpsi,(3:8)),:);
-% 
-%         % separate scans into a table for each of the sessions
-%         if highestOnly
-%            A = scans(ismember(scans.intendedPSI, 15),:);
-%            B = scans(ismember(scans.intendedPSI, 30),:);
-%            C = scans(ismember(scans.intendedPSI, 60),:);
-%            scans = vertcat(A, B, C);
-%         end
-%         ii = find(strcmp(varNamesToPlot{vv},allVarNames));
-% 
-%         % subject data
-%         y = scans.(allVarNames{ii});
-%         goodPoints = ~isnan(y);
-%         x = log10(scans.PSI);
-%         x = x(goodPoints);
-%         y = y(goodPoints);
-%         [x,idxX]=sort(x);
-%         y = y(idxX);
-%         weights = scans.numIpsi;
-%         mSize = weights*20;
-%         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
-%         oY(end+1) = fitObj.Coefficients.Estimate(1);
-%         pX(end+1) = fitObj.Coefficients.Estimate(2);
-%         
-%     end
-%     
-%     % plot offset vs slope test retest values across subjects
-%     pl = subplot(2,length(varNamesToPlot)/2,vv);
-%     plot(pX, oY, 'ob', 'MarkerSize', 10);
-%     fitObj = fitlm(pX,oY,'RobustOpts', 'on');
-%     hold on
-%     plot(pX,fitObj.Fitted,'-r')
-%     pl.Box = 'off';
-%     rsquare = fitObj.Rsquared.Ordinary;
-%     if rsquare > 1 || rsquare < 0
-%         rsquare = nan;
-%     end
-%     title([varNamesToPlot{vv} ' offset vs slope across subjects - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-%     xlabel(['Slope'], 'FontSize', 16)
-%     ylabel(['Offset'], 'FontSize', 16)
-%     axis(pl, 'square');
-%     
-% end
+%% slope vs offset
+
+figure();
+feature = 'maxClosingVelocityI';
+    
+pY = [];
+oX = [];
+
+for ss = 1:length(subList)
+
+    % find scans for desired subject
+    scans = T(ismember(T.subjectID,subList{ss}),:);
+    scans = scans(ismember(scans.valid,'TRUE'),:);
+    scans = scans(ismember(scans.numIpsi,(3:8)),:);
+
+    % separate scans into a table for each of the sessions
+    if highestOnly
+       A = scans(ismember(scans.intendedPSI, 15),:);
+       B = scans(ismember(scans.intendedPSI, 30),:);
+       C = scans(ismember(scans.intendedPSI, 60),:);
+       scans = vertcat(A, B, C);
+    end
+    ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+
+    % subject data
+    y = scans.(allVarNames{ii});
+    goodPoints = ~isnan(y);
+    x = log10(scans.PSI);
+    x = x(goodPoints);
+    y = y(goodPoints);
+    [x,idxX]=sort(x);
+    y = y(idxX);
+    weights = scans.numIpsi;
+    mSize = weights*20;
+    fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
+    oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+    pY(end+1) = fitObj.Coefficients.Estimate(2);
+
+end
+
+% plot parameter test retest values across subjects
+pl = subplot(1,1,1);
+plot(oX, pY, 'ob', 'MarkerSize', 10);
+fitObj = fitlm(oX,pY,'RobustOpts', 'on');
+hold on
+plot(fitObj);
+% plot((-2:5),(-2:5),'k');
+pl.Box = 'off';
+rsquare = fitObj.Rsquared.Ordinary;
+if rsquare > 1 || rsquare < 0
+    rsquare = nan;
+end
+title([feature ' slope vs. offset ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
+xlabel(['Offset'], 'FontSize', 16)
+ylabel(['Slope'], 'FontSize', 16)
+axis(pl, 'square');

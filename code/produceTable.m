@@ -190,6 +190,57 @@ for vv = 1:length(varNamesToPlot1)
     
 end
 
+%% get r for slope vs offset
+
+rSO = [];
+CILX = [];
+CIHX = [];
+
+for vv = 1:length(varNamesToPlot1)
+    
+    oX = [];
+    pY = [];
+    
+    for ss = 1:length(subList)
+
+        % find scans for desired subject
+        scans = T1(ismember(T1.subjectID,subList{ss}),:);
+        scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
+
+        if highestOnly
+           A = scans(ismember(scans.intendedPSI, 15),:);
+           B = scans(ismember(scans.intendedPSI, 30),:);
+           C = scans(ismember(scans.intendedPSI, 60),:);
+           scans = vertcat(A, B, C);
+        end
+        ii = find(strcmp(varNamesToPlot1{vv},allVarNames1));
+
+        % data
+        y = scans.(allVarNames1{ii});
+        goodPoints = ~isnan(y);
+        x = log10(scans.PSI);
+        x = x(goodPoints);
+        y = y(goodPoints);
+        [x,idxX]=sort(x);
+        y = y(idxX);
+        weights = scans.numIpsi;
+        mSize = weights*20;
+        fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
+        oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        pY(end+1) = fitObj.Coefficients.Estimate(2);
+        
+    end
+    
+    co = corrcoef(oX,pY);
+    rSO(end+1) = co(1,2);
+    
+    sostat = sort(bootstrp(1000,@corr,oX,pY));
+    CILX(end+1) = sostat(25);
+    CIHX(end+1) = sostat(975);    
+    
+end
+
 %% get R2 of the habituation effect across trials
 
 r2Hab = [];
@@ -209,7 +260,6 @@ for vv = 1:length(varNamesToPlot2)
         % find scans for desired subject
         scans = T2(ismember(T2.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
-        scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
         % get mean values for each scan
         for zz = 1:25
@@ -282,7 +332,6 @@ for vv = 1:length(varNamesToPlot2)
         % find scans for desired subject
         scans = T2(ismember(T2.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
-        scans = scans(ismember(scans.numIpsi,(3:8)),:);
         dates = unique(scans.scanDate);
         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
         sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
@@ -390,9 +439,9 @@ end
 %% write table
 
 col = {'R2 puff pressure model', 'CI low 1', 'CI high 1', 'TR r slope', 'CI low 2', 'CI high 2', ...
-    'TR r offset',  'CI low 3', 'CI high 3', 'R2 habituation', 'CI low 4', 'CI high 4', ...
+    'TR r offset',  'CI low 3', 'CI high 3', 'slope offset r', 'CI low x', 'CI high x', 'R2 habituation', 'CI low 4', 'CI high 4', ...
     'TR r habituation', 'CI low 5', 'CI high 5'};
 row = {'AUC', 'Latency', 'Time under 20', 'Time to open', 'Initial velocity', ...
      'Time to close', 'Max closing velocity', 'Max opening velocity', 'Blink rate'};
-T = table(R2s', CIL1', CIH1', rslope', CIL2', CIH2', roffset',  CIL3', CIH3', r2Hab', CIL4', CIH4', rHab',  CIL5', CIH5', 'VariableNames', col, 'RowNames', row);
+T = table(R2s', CIL1', CIH1', rslope', CIL2', CIH2', roffset',  CIL3', CIH3', rSO', CILX', CIHX', r2Hab', CIL4', CIH4', rHab',  CIL5', CIH5', 'VariableNames', col, 'RowNames', row);
 writetable(T, fullfile(dataPath,'data','correlationTable.csv'), 'WriteRowNames', 1);
