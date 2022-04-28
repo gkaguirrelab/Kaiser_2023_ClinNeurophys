@@ -47,6 +47,7 @@ for vv = 1:length(varNamesToPlot)
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
         % separate scans into a table for each of the sessions
         dates = unique(scans.scanDate);
@@ -206,6 +207,7 @@ for vv = 1:length(varNamesToPlot)
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
         % separate scans into a table for each of the sessions
         dates = unique(scans.scanDate);
@@ -313,6 +315,7 @@ end
 %         % find scans for desired subject
 %         scans = T(ismember(T.subjectID,subList{ss}),:);
 %         scans = scans(ismember(scans.valid,'TRUE'),:);
+%         scans = scans(ismember(scans.numIpsi,(3:8)),:);
 % 
 %         % separate scans into a table for each of the sessions
 %         if highestOnly

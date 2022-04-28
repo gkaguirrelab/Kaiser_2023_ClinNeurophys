@@ -38,6 +38,7 @@ for vv = 1:length(varNamesToPlot)
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
         if highestOnly
            A = scans(ismember(scans.intendedPSI, 15),:);
            B = scans(ismember(scans.intendedPSI, 30),:);

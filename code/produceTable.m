@@ -52,6 +52,7 @@ for vv = 1:length(varNamesToPlot1)
         % find scans for desired subject
         scans = T1(ismember(T1.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
         if highestOnly
            A = scans(ismember(scans.intendedPSI, 15),:);
            B = scans(ismember(scans.intendedPSI, 30),:);
@@ -108,6 +109,7 @@ for vv = 1:length(varNamesToPlot1)
         % find scans for desired subject
         scans = T1(ismember(T1.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
         % separate scans into a table for each of the sessions
         dates = unique(scans.scanDate);
@@ -132,7 +134,7 @@ for vv = 1:length(varNamesToPlot1)
         weights = sessOne.numIpsi;
         mSize = weights*20;
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
-        oX(end+1) = fitObj.Coefficients.Estimate(1);
+        oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
         pX(end+1) = fitObj.Coefficients.Estimate(2);
 
         % session two data
@@ -146,32 +148,44 @@ for vv = 1:length(varNamesToPlot1)
         weights = sessTwo.numIpsi;
         mSize = weights*20;
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
-        oY(end+1) = fitObj.Coefficients.Estimate(1);
+        oY(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
         pY(end+1) = fitObj.Coefficients.Estimate(2);
     end
     
-    % calculate BA stats in terms of percent
-    ab1 = abs(oX);
-    ab2 = abs(pX);
-    percentO = ((oY - oX) ./ ab1)*100;
-    meanPO = mean(percentO,'omitnan');
-    meanOO = (oX + oY) ./ 2;
-    percentS = ((pY - pX) ./ ab2)*100;
-    meanPS = mean(percentS,'omitnan');
-    meanOS = (pX + pY) ./ 2;
+    co = corrcoef(oX,oY);
+    roffset(end+1) = co(1,2);
+    co = corrcoef(pX,pY);
+    rslope(end+1) = co(1,2);
     
-    % get CIs
-    MyFun = @(d) iqr(d);
-    slopestat = sort(bootstrp(1000,MyFun,percentS));
-    offsetstat = sort(bootstrp(1000,MyFun,percentO));
-    
-    % add to table arrays
+    slopestat = sort(bootstrp(1000,@corr,pX,pY));
+    offsetstat = sort(bootstrp(1000,@corr,oX,oY));
     CIL2(end+1) = slopestat(25);
     CIH2(end+1) = slopestat(975);
     CIL3(end+1) = offsetstat(25);
     CIH3(end+1) = offsetstat(975);
-    roffset(end+1) = iqr(percentO);
-    rslope(end+1) = iqr(percentS);
+    
+%     % calculate BA stats in terms of percent
+%     ab1 = abs(oX);
+%     ab2 = abs(pX);
+%     percentO = ((oY - oX) ./ ab1)*100;
+%     meanPO = mean(percentO,'omitnan');
+%     meanOO = (oX + oY) ./ 2;
+%     percentS = ((pY - pX) ./ ab2)*100;
+%     meanPS = mean(percentS,'omitnan');
+%     meanOS = (pX + pY) ./ 2;
+%     
+%     % get CIs
+%     MyFun = @(d) iqr(d);
+%     slopestat = sort(bootstrp(1000,MyFun,percentS));
+%     offsetstat = sort(bootstrp(1000,MyFun,percentO));
+%     
+%     % add to table arrays
+%     CIL2(end+1) = slopestat(25);
+%     CIH2(end+1) = slopestat(975);
+%     CIL3(end+1) = offsetstat(25);
+%     CIH3(end+1) = offsetstat(975);
+%     roffset(end+1) = iqr(percentO);
+%     rslope(end+1) = iqr(percentS);
     
     
 end
@@ -195,6 +209,7 @@ for vv = 1:length(varNamesToPlot2)
         % find scans for desired subject
         scans = T2(ismember(T2.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
         % get mean values for each scan
         for zz = 1:25
@@ -267,6 +282,7 @@ for vv = 1:length(varNamesToPlot2)
         % find scans for desired subject
         scans = T2(ismember(T2.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.numIpsi,(3:8)),:);
         dates = unique(scans.scanDate);
         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
         sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);

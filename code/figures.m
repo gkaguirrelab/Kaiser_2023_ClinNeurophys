@@ -67,6 +67,7 @@ figure();
 % find scans for desired subject
 scans = T(ismember(T.subjectID,subject),:);
 scans = scans(ismember(scans.valid,'TRUE'),:);
+scans = scans(ismember(scans.numIpsi,(3:8)),:);
 dates = unique(scans.scanDate);
 sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
 sessTwo = scans(ismember(scans.scanDate,dates(2,1)),:);
@@ -120,6 +121,7 @@ for ss = 1:length(subList)
     % find scans for desired subject
     scans = T(ismember(T.subjectID,subList{ss}),:);
     scans = scans(ismember(scans.valid,'TRUE'),:);
+    scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
     % separate scans into a table for each of the sessions
     dates = unique(scans.scanDate);
@@ -245,6 +247,7 @@ for ss = 1:length(subList)
     % find scans for desired subject
     scans = T(ismember(T.subjectID,subList{ss}),:);
     scans = scans(ismember(scans.valid,'TRUE'),:);
+    scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
     % separate scans into a table for each of the sessions
     dates = unique(scans.scanDate);
@@ -271,7 +274,7 @@ for ss = 1:length(subList)
     % get session one slope and offset values
     fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
     pX(end+1) = fitObj.Coefficients.Estimate(2);
-    oX(end+1) = fitObj.Coefficients.Estimate(1);
+    oX(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);;
     rsquare = fitObj.Rsquared.Ordinary;
 
     % session two data
@@ -288,7 +291,7 @@ for ss = 1:length(subList)
     % get session two slope and offset values
     fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
     pY(end+1) = fitObj.Coefficients.Estimate(2);
-    oY(end+1) = fitObj.Coefficients.Estimate(1);
+    oY(end+1) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);;
 end
 
 % plot parameter test retest values across subjects
@@ -317,15 +320,15 @@ plot(oX, oY, 'ob', 'MarkerSize', 10);
 fitObj = fitlm(oX,oY,'RobustOpts', 'on');
 hold on
 plot(fitObj);
-plot((-2:14),(-2:14),'k');
+plot((6:12),(6:12),'k');
 pl.Box = 'off';
 rsquare = fitObj.Rsquared.Ordinary;
 if rsquare > 1 || rsquare < 0
     rsquare = nan;
 end
 title([feature ' offset by session - ' sprintf(' R^2=%2.2f',rsquare)], 'FontSize', 16)
-xlabel(['Offset'], 'FontSize', 16)
-ylabel(['Offset'], 'FontSize', 16)
+xlabel(['Offset'], 'FontSize', 16);
+ylabel(['Offset'], 'FontSize', 16);
 ylim(xlim);
 axis(pl, 'square');
 
@@ -416,6 +419,7 @@ for ss = 1:length(subList)
     % find scans for desired subject
     scans = T2(ismember(T2.subjectID,subList{ss}),:);
     scans = scans(ismember(scans.valid,'TRUE'),:);
+    scans = scans(ismember(scans.numIpsi,(3:8)),:);
 
     % get mean values for each scan
     for zz = 1:25

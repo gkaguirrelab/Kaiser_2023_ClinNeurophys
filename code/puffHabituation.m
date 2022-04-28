@@ -26,7 +26,7 @@ subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591,
 % varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
 %      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
-% subList = {14591};
+subList = {14591};
 varNamesToPlot = {'maxClosingVelocity'};
 
 % create MATLAB table variable
