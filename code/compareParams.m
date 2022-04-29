@@ -209,6 +209,25 @@ xlim([-4 4])
 ylim([-4 4])
 axis square 
 
+%% correlation of slopes and offset scores
+corrs = [];
+CIL = [];
+CIH = [];
+
+for ii = 1:length(varNamesToPlot)
+   
+    pScores = pcaResults.variableSlopes.score(:,ii);
+    oScores = pcaResults.variableOffsets.score(:,ii);
+    
+    co = corrcoef(pScores, oScores);
+    corrs(end+1) = co(1,2);
+    
+    bootstat = sort(bootstrp(1000,@corr,pScores,oScores));
+    CIL(end+1) = bootstat(25);
+    CIH(end+1) = bootstat(975);
+    
+end
+
 %% Do a PCA correlation on the combined slopes and offsets
 slopesAndOffsets = [slopes offsets];
 slopesAndOffsets = (slopesAndOffsets-mean(slopesAndOffsets))./std(slopesAndOffsets);

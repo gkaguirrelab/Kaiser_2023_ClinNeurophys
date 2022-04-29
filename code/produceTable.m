@@ -39,13 +39,13 @@ allVarNames2 = T2.Properties.VariableNames;
 
 %% get mean R2s
 
-R2s = [];
+Rs = [];
 CIL1 = [];
 CIH1 = [];
 
 for vv = 1:length(varNamesToPlot1)
     
-    varR2 = [];
+    varR = [];
     
     for ss = 1:length(subList)
 
@@ -78,12 +78,14 @@ for vv = 1:length(varNamesToPlot1)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        varR2(end+1) = rsquare;
+        
+        co = corrcoef(x,y);
+        varR(end+1) = co(1,2);
         
     end
     
-    R2s(end+1) = mean(varR2,'omitnan');
-    bootstat = sort(bootstrp(1000,@mean,varR2));
+    Rs(end+1) = mean(varR,'omitnan');
+    bootstat = sort(bootstrp(1000,@mean,varR));
     CIL1(end+1) = bootstat(25);
     CIH1(end+1) = bootstat(975);
 end
@@ -249,7 +251,7 @@ CIH4 = [];
 
 for vv = 1:length(varNamesToPlot2)
     
-    varR2 = [];
+    varR = [];
     
     for ss = 1:length(subList)
         
@@ -301,12 +303,12 @@ for vv = 1:length(varNamesToPlot2)
         if rsquare > 1 || rsquare < 0
             rsquare = nan;
         end
-        varR2(end+1) = rsquare;
+        varR(end+1) = rsquare;
 
     end
         
-    r2Hab(end+1) = mean(varR2,'omitnan');
-    bootstat = sort(bootstrp(1000,@mean,varR2));
+    r2Hab(end+1) = mean(varR,'omitnan');
+    bootstat = sort(bootstrp(1000,@mean,varR));
     CIL4(end+1) = bootstat(25);
     CIH4(end+1) = bootstat(975);
     
@@ -443,5 +445,5 @@ col = {'R2 puff pressure model', 'CI low 1', 'CI high 1', 'TR r slope', 'CI low 
     'TR r habituation', 'CI low 5', 'CI high 5'};
 row = {'AUC', 'Latency', 'Time under 20', 'Time to open', 'Initial velocity', ...
      'Time to close', 'Max closing velocity', 'Max opening velocity', 'Blink rate'};
-T = table(R2s', CIL1', CIH1', rslope', CIL2', CIH2', roffset',  CIL3', CIH3', rSO', CILX', CIHX', r2Hab', CIL4', CIH4', rHab',  CIL5', CIH5', 'VariableNames', col, 'RowNames', row);
+T = table(Rs', CIL1', CIH1', rslope', CIL2', CIH2', roffset',  CIL3', CIH3', rSO', CILX', CIHX', r2Hab', CIL4', CIH4', rHab',  CIL5', CIH5', 'VariableNames', col, 'RowNames', row);
 writetable(T, fullfile(dataPath,'data','correlationTable.csv'), 'WriteRowNames', 1);
