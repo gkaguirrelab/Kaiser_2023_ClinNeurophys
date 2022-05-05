@@ -13,19 +13,13 @@ dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet1 ='UPenn Ipsi Summary_25ms_02062022.csv';
 spreadsheet2 ='Upenn_Ipsilateral Afiles_clean_full.csv';
 
-% choose subject and parameters
+% choose subject and parameters, the first set of parameters is for the
+% puff pressure analyses and the second set of parameters is for the
+% habituation analyses
 varNamesToPlot1 = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'blinkRate'};
 varNamesToPlot2 = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
-highestOnly = true;
-if highestOnly
-    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
-else
-    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14587, 14586};
-end
 
 xFit = linspace(log10(3),log10(70),50);
 
@@ -36,6 +30,17 @@ allVarNames1 = T1.Properties.VariableNames;
 % create MATLAB table variable habituation
 T2 = readtable(fullfile(dataPath,'data',spreadsheet2));
 allVarNames2 = T2.Properties.VariableNames;
+
+% decide whether analysis should include all 5 PSI levels or just the top
+% three and select the appropriate subject list
+highestOnly = true;
+if highestOnly
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
+else
+    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14587, 14586};
+end
 
 %% get mean R2s
 
@@ -164,31 +169,7 @@ for vv = 1:length(varNamesToPlot1)
     CIL2(end+1) = slopestat(25);
     CIH2(end+1) = slopestat(975);
     CIL3(end+1) = offsetstat(25);
-    CIH3(end+1) = offsetstat(975);
-    
-%     % calculate BA stats in terms of percent
-%     ab1 = abs(oX);
-%     ab2 = abs(pX);
-%     percentO = ((oY - oX) ./ ab1)*100;
-%     meanPO = mean(percentO,'omitnan');
-%     meanOO = (oX + oY) ./ 2;
-%     percentS = ((pY - pX) ./ ab2)*100;
-%     meanPS = mean(percentS,'omitnan');
-%     meanOS = (pX + pY) ./ 2;
-%     
-%     % get CIs
-%     MyFun = @(d) iqr(d);
-%     slopestat = sort(bootstrp(1000,MyFun,percentS));
-%     offsetstat = sort(bootstrp(1000,MyFun,percentO));
-%     
-%     % add to table arrays
-%     CIL2(end+1) = slopestat(25);
-%     CIH2(end+1) = slopestat(975);
-%     CIL3(end+1) = offsetstat(25);
-%     CIH3(end+1) = offsetstat(975);
-%     roffset(end+1) = iqr(percentO);
-%     rslope(end+1) = iqr(percentS);
-    
+    CIH3(end+1) = offsetstat(975);    
     
 end
 

@@ -1,4 +1,4 @@
-%% compareParams
+%% runPCAAnalysis
 % This script loads a blink data set into a MATLAB table variable. When
 % run, it will aggregate data for a given subject for the given parameters 
 % across sessions. It will create a matrix of slopes for each parameter.

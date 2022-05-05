@@ -1,5 +1,9 @@
 %% slopeTestRetest
-% 
+% This script loads a blink data set into a MATLAB table variable. When
+% run, it calculates the slope value for residuals for each subject session
+% and calculates test-retest R2 as a function of both acquisition and trial 
+% number. It then produces Bland-Altman and box plots for this data.
+%
 %       Scan PSI index (out of 26 scans, discarding scan 1):
 %          3.5 PSI: [3 8 13 24 25]
 %          7.5 PSI: [9 11 12 20 22]
