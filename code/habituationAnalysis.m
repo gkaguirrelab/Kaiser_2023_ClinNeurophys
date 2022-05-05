@@ -23,11 +23,11 @@ spreadsheet ='Upenn_Ipsilateral Afiles_clean_full.csv';
 % choose subject and parameters
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586};
-% varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
-%      'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
+varNamesToPlot = {'auc', 'latency', 'timeUnder20', 'openTime', 'initialVelocity', ...
+     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
-subList = {14591};
-varNamesToPlot = {'maxClosingVelocity'};
+% subList = {14591};
+% varNamesToPlot = {'maxClosingVelocity'};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));

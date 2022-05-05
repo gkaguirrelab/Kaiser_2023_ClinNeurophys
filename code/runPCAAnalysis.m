@@ -8,7 +8,8 @@ clear all
 dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 
-% choose subject and parameters
+% decide whether analysis should include all 5 PSI levels or just the top
+% three and select the appropriate subject list
 highestOnly = true;
 if highestOnly
     subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
@@ -17,6 +18,8 @@ else
     subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14587, 14586};
 end
+
+% select blink features to analyze
 varNamesToPlot = {'aucI', 'latencyI', 'timeUnderI', 'openTimeI', 'initVelocityI', ...
      'closeTimeI', 'maxClosingVelocityI', 'maxOpeningVelocityI', 'blinkRate'};
 

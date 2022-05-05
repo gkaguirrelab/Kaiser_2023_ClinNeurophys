@@ -152,7 +152,7 @@ for vv = 1:length(varNamesToPlot)
     hold on
 %     plot(pX,fitObj.Fitted,'-r')
     plot(fitObj);
-%     plot((-2:5),(-2:5),'k');
+    plot((-2:5),(-2:5),'k');
     pl.Box = 'off';
     rsquare = fitObj.Rsquared.Ordinary;
     if rsquare > 1 || rsquare < 0
@@ -164,15 +164,15 @@ for vv = 1:length(varNamesToPlot)
     ylim(xlim);
     axis(pl, 'square');
     
-    % plot offset test retest values across subjects
+    % plot parameter test retest values across subjects
     figure();
     pl = subplot(1,1,1);
     plot(oX, oY, 'ob', 'MarkerSize', 10);
     fitObj = fitlm(oX,oY,'RobustOpts', 'on');
-%     hold on
+% % %     hold on
 %     plot(oX,fitObj.Fitted,'-r')
     plot(fitObj);
-%     plot((-2:14),(-2:14),'k');
+    plot((-2:14),(-2:14),'k');
     pl.Box = 'off';
     rsquare = fitObj.Rsquared.Ordinary;
     if rsquare > 1 || rsquare < 0
@@ -186,7 +186,7 @@ for vv = 1:length(varNamesToPlot)
     
 end
 
-%% test retest slope or offset Bland Altman analysis
+%% 2 by 2 test retest slope or offset plots
 figure();
 
 for vv = 1:length(varNamesToPlot)
@@ -248,6 +248,7 @@ for vv = 1:length(varNamesToPlot)
     
     % Bland-Altman Analysis
     if offset
+%         pl = subplot(2,2,vv);
         
         % get BA stats
         differences = oX - oY;
@@ -270,6 +271,7 @@ for vv = 1:length(varNamesToPlot)
         ylabel(['Offset difference'], 'FontSize', 16)
         axis(pl, 'square');
     else
+%         pl = subplot(2,2,vv);
         
         % get BA stats
         differences = pX - pY;

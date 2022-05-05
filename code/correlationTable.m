@@ -89,6 +89,7 @@ for vv = 1:length(varNamesToPlot1)
         
     end
     
+    % add R2 and CIs to table arrays
     Rs(end+1) = mean(varR,'omitnan');
     bootstat = sort(bootstrp(1000,@mean,varR));
     CIL1(end+1) = bootstat(25);
@@ -159,11 +160,13 @@ for vv = 1:length(varNamesToPlot1)
         pY(end+1) = fitObj.Coefficients.Estimate(2);
     end
     
+    % calculate r values and add to table arrays
     co = corrcoef(oX,oY);
     roffset(end+1) = co(1,2);
     co = corrcoef(pX,pY);
     rslope(end+1) = co(1,2);
     
+    % calculate CIs and add to table arrays
     slopestat = sort(bootstrp(1000,@corr,pX,pY));
     offsetstat = sort(bootstrp(1000,@corr,oX,oY));
     CIL2(end+1) = slopestat(25);
@@ -215,6 +218,7 @@ for vv = 1:length(varNamesToPlot1)
         
     end
     
+    % calculate r and CIs and add to table arrays
     co = corrcoef(oX,pY);
     rSO(end+1) = co(1,2);
     
@@ -287,7 +291,8 @@ for vv = 1:length(varNamesToPlot2)
         varR(end+1) = rsquare;
 
     end
-        
+    
+    % add R2 and CIs to table arrays
     r2Hab(end+1) = mean(varR,'omitnan');
     bootstat = sort(bootstrp(1000,@mean,varR));
     CIL4(end+1) = bootstat(25);
@@ -413,6 +418,7 @@ for vv = 1:length(varNamesToPlot2)
     MyFun = @(d) iqr(d);
     slopestat = sort(bootstrp(1000,MyFun,percentS));
     
+    % add values to table arrays
     rHab(end+1) = iqr(percentS);
     CIL5(end+1) = slopestat(25);
     CIH5(end+1) = slopestat(975);
