@@ -19,8 +19,8 @@ else
 end
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
-
-varIdxToUse = 1:9;
+varIdxToUse = {[5 7 2 1 3 4 8 6 9],...
+    [1 3 4 5 7 2 9 8 6]};
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -33,7 +33,7 @@ offsetsSessOne = zeros(length(subList), length(varNamesToPlot));
 offsetsSessTwo = zeros(length(subList), length(varNamesToPlot));
 
 %% create slopes matrix containing the slope values for each var and subject
-for vv = 1:length(varNamesToPlot)
+for pp = 1:length(varNamesToPlot)
 
     for ss = 1:length(subList)
 
@@ -47,7 +47,7 @@ for vv = 1:length(varNamesToPlot)
             C = scans(ismember(scans.intendedPSI, 60),:);
             scans = vertcat(A, B, C);
         end
-        ii = find(strcmp(varNamesToPlot{vv},allVarNames));
+        ii = find(strcmp(varNamesToPlot{pp},allVarNames));
         weights = scans.numIpsi;
         dates = unique(scans.scanDate);
         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
@@ -64,10 +64,10 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
-        slopes(ss, vv) = fitObj.Coefficients.Estimate(2);
+        slopes(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsets(ss,vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
 
         % subject parameter data session 1
         y = sessOne.(allVarNames{ii});
@@ -78,10 +78,10 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessOne);
-        slopesSessOne(ss, vv) = fitObj.Coefficients.Estimate(2);
+        slopesSessOne(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessOne(ss,vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
 
         % subject parameter data session 2
         y = sessTwo.(allVarNames{ii});
@@ -92,10 +92,10 @@ for vv = 1:length(varNamesToPlot)
         [x,idxX]=sort(x);
         y = y(idxX);
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weightsSessTwo);
-        slopesSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2);
+        slopesSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessTwo(ss, vv) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
     end
 
 end
@@ -130,17 +130,43 @@ for ii = 1:2
 
     % Standardize the measures
     standardized = (allMeasures{1,ii}-mean(allMeasures{1,ii}))./std(allMeasures{1,ii});
-    varNames = strcat(varNamesToPlot(varIdxToUse),allMeasureNames{ii});
+
+    % Re-order the variables for this measure to improve plotting
+    standardized = standardized(:,varIdxToUse{ii});
+    varNames = strcat(varNamesToPlot(varIdxToUse{ii}),allMeasureNames{ii});
+
+    % Handle sign reversal
+    if ii==1
+        idxToFlip = contains(varNames,{'latency','maxOpeningVelocity'});
+        standardized(:,idxToFlip) = -standardized(:,idxToFlip);
+        varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
+        figure
+        imagesc(corr(standardized))
+        xticklabels(varNames);
+        yticklabels(varNames);
+        title('slope correlation matrix')
+    end
+
+    if ii==2
+        idxToFlip = contains(varNames,{'latency','closeTime'});
+        standardized(:,idxToFlip) = -standardized(:,idxToFlip);
+        varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
+        figure
+        imagesc(corr(standardized))
+        xticklabels(varNames);
+        yticklabels(varNames);
+        title('offset correlation matrix')
+    end
 
     % Conduct an NMF dimension reduction for the aggregate measurements.
     % First, loop over the number of dimensions and save the RMS residual
     nmfResidual(1) = nan;
     for dd = 2:4
-        [~,~,nmfResidual(dd)] = nnmf(standardized(:,varIdxToUse),dd);
+        [~,~,nmfResidual(dd)] = nnmf(standardized,dd);
     end
 
     % We end up running this with 3 dimensions
-    [W,H] = nnmf(standardized(:,varIdxToUse),3);
+    [W,H] = nnmf(standardized,3);
     coeff = H';
     score = W;
 
@@ -148,6 +174,7 @@ for ii = 1:2
     nmfResults.(allMeasureNames{1,ii}).('coeff') = coeff;
     nmfResults.(allMeasureNames{1,ii}).('score') = score;
     nmfResults.(allMeasureNames{1,ii}).('standardized') = standardized;
+    nmfResults.(allMeasureNames{1,ii}).('varNames') = varNames;
 
     % Create some diagnostic plots
 
@@ -173,8 +200,10 @@ for ii = 1:2
     % Project the individual sessions to the NMF solution
     sessionOneStandard = (allMeasures{ii+1,1}-mean(allMeasures{ii+1,1}))./std(allMeasures{ii+1,1});
     sessionTwoStandard = (allMeasures{ii+1,2}-mean(allMeasures{ii+1,2}))./std(allMeasures{ii+1,2});
-    sessionOneProjected = sessionOneStandard(:,varIdxToUse)*coeff(:,1:2);
-    sessionTwoProjected = sessionTwoStandard(:,varIdxToUse)*coeff(:,1:2);
+        sessionOneStandard = sessionOneStandard(:,varIdxToUse{ii});
+    sessionTwoStandard = sessionTwoStandard(:,varIdxToUse{ii});
+    sessionOneProjected = sessionOneStandard*coeff(:,1:2);
+    sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);
 
     set(0,'CurrentFigure',figure2)
     subplot(2,2,plotCounter2)
@@ -206,7 +235,7 @@ for ii = 1:2
 end
 
 %% Correlation of NMF dimensions derived from slopes and offsets
-slopesNMF1 = nmfResults.Slopes.standardized(:,varIdxToUse) * nmfResults.Slopes.coeff(:,1);
-slopesNMF2 = nmfResults.Slopes.standardized(:,varIdxToUse) * nmfResults.Slopes.coeff(:,2);
-offsetNMF1 = nmfResults.Offsets.standardized(:,varIdxToUse) * nmfResults.Offsets.coeff(:,1);
-offsetNMF2 = nmfResults.Offsets.standardized(:,varIdxToUse) * nmfResults.Offsets.coeff(:,2);
+slopesNMF1 = nmfResults.Slopes.standardized * nmfResults.Slopes.coeff(:,1);
+slopesNMF2 = nmfResults.Slopes.standardized * nmfResults.Slopes.coeff(:,2);
+offsetNMF1 = nmfResults.Offsets.standardized * nmfResults.Offsets.coeff(:,1);
+offsetNMF2 = nmfResults.Offsets.standardized * nmfResults.Offsets.coeff(:,2);
