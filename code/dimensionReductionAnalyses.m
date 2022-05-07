@@ -2,7 +2,13 @@
 % This script loads a blink data set into a MATLAB table variable. When
 % run, it will aggregate data for a given subject for the given parameters
 % across sessions. It will create a matrix of slopes for each parameter.
-clear all
+
+% Housekeeping
+clear; close all
+rng('default')
+warnState = warning();
+warning('off','stats:nnmf:LowRank');
+warning('off','stats:statrobustfit:IterationLimit');
 
 % load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
@@ -11,7 +17,9 @@ spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
 % choose subject and parameters
 highestOnly = true;
 if highestOnly
-    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+%     subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+%         14590, 14589, 14588, 14587, 14586};
+    subList = {15512, 15507, 15506, 15505, 14595, 14594, 14593, 14592, 14591, ...
         14590, 14589, 14588, 14587, 14586};
 else
     subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
@@ -19,8 +27,13 @@ else
 end
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
-varIdxToUse = {[5 7 2 1 3 4 8 6 9],...
-    [1 3 4 5 7 2 9 8 6]};
+
+% varIdxToUse = {[5 7 2 1 4 3 8 6 9],...
+%     [1 3 4 5 7 6 8 2 9]};
+
+varIdxToUse = {[2 7 5 1 3 4 6 8 9],...
+    [2 7 5 1 3 4 6 8 9]};
+
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -72,7 +85,7 @@ for pp = 1:length(varNamesToPlot)
         % subject parameter data session 1
         y = sessOne.(allVarNames{ii});
         goodPoints = ~isnan(y);
-        x = log10(scans.PSI);
+        x = log10(sessOne.PSI);
         x = x(goodPoints);
         y = y(goodPoints);
         [x,idxX]=sort(x);
@@ -86,7 +99,7 @@ for pp = 1:length(varNamesToPlot)
         % subject parameter data session 2
         y = sessTwo.(allVarNames{ii});
         goodPoints = ~isnan(y);
-        x = log10(scans.PSI);
+        x = log10(sessTwo.PSI);
         x = x(goodPoints);
         y = y(goodPoints);
         [x,idxX]=sort(x);
@@ -96,11 +109,10 @@ for pp = 1:length(varNamesToPlot)
 
         % Get the y value at median x and it will be our offset
         offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+    
     end
 
 end
-
-comp = corr(slopes);
 
 %% Make test-retest analysis.
 
@@ -109,133 +121,106 @@ comp = corr(slopes);
 % and PC2 vectors and correlate their new scores.
 
 % Save measurements and names in cells
-allMeasures = {slopes, offsets; ...
-    slopesSessOne, slopesSessTwo; ...
-    offsetsSessOne, offsetsSessTwo};
-allMeasureNames = {'Slopes', 'Offsets', ...
-    'slopesSessOne', 'slopesSessTwo', ...
-    'offsetsSessOne', 'offsetsSessTwo'};
-
-% Initialize figures
-figure1 = figure('Renderer', 'painters', 'Position', [164 71 1401 891]);
-figure2 = figure('Renderer', 'painters', 'Position', [164 71 1401 891]);
-plotCounter = 1;
-plotCounter2 = 1;
-combinedSessions = [];
+allMeasures = {slopes, offsets};
+allMeasuresSessOne = {slopesSessOne,offsetsSessOne};
+allMeasuresSessTwo = {slopesSessTwo,offsetsSessTwo};
+allMeasureNames = {'slopes', 'offsets'};
 
 % Loop over the set [slopes, offsets, (slopes offsets)], and for each data set perform an NMF
 % decomposition. Save the nmfResults struct and plot some diagnostics
 
+figure
+
 for ii = 1:2
 
     % Standardize the measures
-    standardized = (allMeasures{1,ii}-mean(allMeasures{1,ii}))./std(allMeasures{1,ii});
+    standardized = (allMeasures{ii}-mean(allMeasures{ii}))./std(allMeasures{ii});
+    sessionOneStandard = (allMeasuresSessOne{ii}-mean(allMeasuresSessOne{ii}))./std(allMeasuresSessOne{ii});
+    sessionTwoStandard = (allMeasuresSessTwo{ii}-mean(allMeasuresSessTwo{ii}))./std(allMeasuresSessTwo{ii});
 
     % Re-order the variables for this measure to improve plotting
     standardized = standardized(:,varIdxToUse{ii});
+    sessionOneStandard = sessionOneStandard(:,varIdxToUse{ii});
+    sessionTwoStandard = sessionTwoStandard(:,varIdxToUse{ii});
     varNames = strcat(varNamesToPlot(varIdxToUse{ii}),allMeasureNames{ii});
+
+    % Initialize the coeff variable
+    coeff = zeros(9,3);
 
     % Handle sign reversal
     if ii==1
-        idxToFlip = contains(varNames,{'latency','maxOpeningVelocity'});
-        standardized(:,idxToFlip) = -standardized(:,idxToFlip);
-        varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
-        figure
-        imagesc(corr(standardized))
-        xticklabels(varNames);
-        yticklabels(varNames);
-        title('slope correlation matrix')
+        idxToFlip = contains(varNames,{'latency'});
+        coeff(1:3,1) = 1/sqrt(3); % velocity
+        coeff(4:6,2) = 1/sqrt(3); % depth
     end
 
     if ii==2
-        idxToFlip = contains(varNames,{'latency','closeTime'});
-        standardized(:,idxToFlip) = -standardized(:,idxToFlip);
-        varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
-        figure
-        imagesc(corr(standardized))
-        xticklabels(varNames);
-        yticklabels(varNames);
-        title('offset correlation matrix')
+        idxToFlip = contains(varNames,{'latency'});
+        coeff(2:6,1) = 1/sqrt(5); % velocity
+        coeff(7:8,2) = 1/sqrt(2); % depth
     end
 
-    % Conduct an NMF dimension reduction for the aggregate measurements.
-    % First, loop over the number of dimensions and save the RMS residual
-    nmfResidual(1) = nan;
-    for dd = 2:4
-        [~,~,nmfResidual(dd)] = nnmf(standardized,dd);
-    end
+    standardized(:,idxToFlip) = -standardized(:,idxToFlip);
+    sessionOneStandard(:,idxToFlip) = -sessionOneStandard(:,idxToFlip);
+    sessionTwoStandard(:,idxToFlip) = -sessionTwoStandard(:,idxToFlip);
+    varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
 
-    % We end up running this with 3 dimensions
-    [W,H] = nnmf(standardized,3);
+    fSparse = length(coeff(:));
+    for nn=1:1000
+        [~,iterH] = nnmf(standardized,3,'H0',coeff');
+        penaltyMat = iterH;
+        penaltyMat(iterH>0.5) = -(iterH(iterH>0.5)-1);
+        thisSparse = norm(penaltyMat(:));
+        if thisSparse < fSparse && ~any(all(iterH'==0))
+            fSparse = thisSparse;
+            H = iterH;
+        end
+    end
     coeff = H';
-    score = W;
 
-    % Save NMF results to a structure
-    nmfResults.(allMeasureNames{1,ii}).('coeff') = coeff;
-    nmfResults.(allMeasureNames{1,ii}).('score') = score;
-    nmfResults.(allMeasureNames{1,ii}).('standardized') = standardized;
-    nmfResults.(allMeasureNames{1,ii}).('varNames') = varNames;
+    % If we are dealing with slopes, switch the order of the NMF dimensions
+    % to make plotting a bit easier
+    if ii==1
+        coeff=coeff(:,[2 1 3]);
+    end
 
-    % Create some diagnostic plots
+    dColors = {'b','g'};
 
-    % Residual by dimensions
-    set(0,'CurrentFigure',figure1)
-    subplot(2, 3, plotCounter)
-    plot(1:4,nmfResidual)
-    xlabel('number of dimensions'); ylabel('RMS residual');
+    subplot(3,2,ii)
+    imagesc(corr(standardized,'Type','Kendall'))
+    xticks(1:9);
+    yticks(1:9);
+    xticklabels(varNames);
+    yticklabels(varNames);
+    title([allMeasureNames{ii} ' correlation matrix'])
+    for dd=1:2
+        xx = find(coeff(:,dd)>0.35,1,"first");
+        hw = find(coeff(:,dd)>0.35,1,"last")-xx+1;
+        rectangle('Position',[xx-0.5 xx-0.5 hw hw],'EdgeColor',dColors{dd},'LineWidth',2);
+    end
 
-    % biplot
-    subplot(2, 3, plotCounter+1)
-    biplot(coeff(:,1:3),'scores',score(:,1:3),'varLabels',varNames)
-    title(allMeasureNames{1,ii})
-    axis equal
-
-    % scores
-    subplot(2, 3, plotCounter+2)
-    scatter(score(:,1),score(:,2),'or')
-    axis square
-    title(allMeasureNames{1,ii})
-    xlabel('component 1'); ylabel('component 2'); zlabel('component 3');
-
-    % Project the individual sessions to the NMF solution
-    sessionOneStandard = (allMeasures{ii+1,1}-mean(allMeasures{ii+1,1}))./std(allMeasures{ii+1,1});
-    sessionTwoStandard = (allMeasures{ii+1,2}-mean(allMeasures{ii+1,2}))./std(allMeasures{ii+1,2});
-        sessionOneStandard = sessionOneStandard(:,varIdxToUse{ii});
-    sessionTwoStandard = sessionTwoStandard(:,varIdxToUse{ii});
+    sessionBothProjected = standardized*coeff(:,1:2);
     sessionOneProjected = sessionOneStandard*coeff(:,1:2);
     sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);
 
-    set(0,'CurrentFigure',figure2)
-    subplot(2,2,plotCounter2)
-    mdl = fitlm(sessionOneProjected(:,1), sessionTwoProjected(:,1));
-    plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b')
-    legend off
-    xlabel('Session 1 projected onto NMF1')
-    ylabel('Session 2 projected onto NMF1')
-    title(allMeasureNames{ii})
-    axis equal
-    xlim([-4 4])
-    ylim([-4 4])
-    axis square
+    % Store the results
+    results.(allMeasureNames{ii}) = sessionBothProjected;
 
-    subplot(2,2,plotCounter2+1)
-    mdl = fitlm(sessionOneProjected(:,2), sessionTwoProjected(:,2));
-    plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','b', 'MarkerFaceColor','b')
-    legend off
-    xlabel('Session 1 projected onto NMF2')
-    ylabel('Session 2 projected onto NMF2')
-    title(allMeasureNames{ii})
-    axis equal
-    xlim([-4 4])
-    ylim([-4 4])
-    axis square
+    zRange = ceil(max([sessionOneProjected(:); sessionTwoProjected(:)]));
+    for dd=1:2
+        subplot(3,2,ii+dd*2)
+        mdl = fitlm(sessionOneProjected(:,dd), sessionTwoProjected(:,dd),'RobustOpts','on');
+        plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','none', 'MarkerFaceColor',dColors{dd})
+        legend off
+        xlabel(sprintf('Session 1 projected onto d%d',dd))
+        ylabel(sprintf('Session 2 projected onto d%d',dd))
+        axis equal
+        xlim([-zRange zRange])
+        ylim([-zRange zRange])
+        axis square
+        title([allMeasureNames{ii} sprintf(' d%d',dd)]);
+    end
 
-    plotCounter = plotCounter + 3;
-    plotCounter2 = plotCounter2 + 2;
 end
 
-%% Correlation of NMF dimensions derived from slopes and offsets
-slopesNMF1 = nmfResults.Slopes.standardized * nmfResults.Slopes.coeff(:,1);
-slopesNMF2 = nmfResults.Slopes.standardized * nmfResults.Slopes.coeff(:,2);
-offsetNMF1 = nmfResults.Offsets.standardized * nmfResults.Offsets.coeff(:,1);
-offsetNMF2 = nmfResults.Offsets.standardized * nmfResults.Offsets.coeff(:,2);
+    warning(warnState);
