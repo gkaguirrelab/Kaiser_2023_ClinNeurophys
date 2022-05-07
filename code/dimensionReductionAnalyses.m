@@ -28,9 +28,8 @@ end
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
-% varIdxToUse = {[5 7 2 1 4 3 8 6 9],...
-%     [1 3 4 5 7 6 8 2 9]};
-
+% These vector are used to re-order the blink features in plotting to more
+% easily show their grouping into dimensions.
 varIdxToUse = {[2 7 5 1 3 4 6 8 9],...
     [2 7 5 1 3 4 6 8 9]};
 
@@ -184,21 +183,31 @@ for ii = 1:2
         coeff=coeff(:,[2 1 3]);
     end
 
+    % Show the correlation matrices of the blink features
     dColors = {'b','g'};
-
-    subplot(3,2,ii)
+    subplot(4,2,ii)
     imagesc(corr(standardized,'Type','Kendall'))
     xticks(1:9);
     yticks(1:9);
-    xticklabels(varNames);
-    yticklabels(varNames);
+%    xticklabels(varNames);
+%    yticklabels(varNames);
     title([allMeasureNames{ii} ' correlation matrix'])
+    axis square
+    % Add some rectangles to indicate the cell groups into dimensions
     for dd=1:2
         xx = find(coeff(:,dd)>0.35,1,"first");
         hw = find(coeff(:,dd)>0.35,1,"last")-xx+1;
         rectangle('Position',[xx-0.5 xx-0.5 hw hw],'EdgeColor',dColors{dd},'LineWidth',2);
     end
 
+    % Make a plot of the dimension weights
+    subplot(4,2,2+ii)
+    b=bar(coeff(:,1:2));
+    xticklabels(varNames);
+    ylabel('coefficient');
+    b(1).FaceColor=dColors{1}; b(2).FaceColor=dColors{2};
+
+    % Project the separate sessions onto the coefficients
     sessionBothProjected = standardized*coeff(:,1:2);
     sessionOneProjected = sessionOneStandard*coeff(:,1:2);
     sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);
@@ -208,7 +217,7 @@ for ii = 1:2
 
     zRange = ceil(max([sessionOneProjected(:); sessionTwoProjected(:)]));
     for dd=1:2
-        subplot(3,2,ii+dd*2)
+        subplot(4,2,2+ii+dd*2)
         mdl = fitlm(sessionOneProjected(:,dd), sessionTwoProjected(:,dd),'RobustOpts','on');
         plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','none', 'MarkerFaceColor',dColors{dd})
         legend off
