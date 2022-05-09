@@ -11,7 +11,8 @@ clear; close all
 
 % Some constants for the analysis
 nDimensions = 3;
-groupCellThresh = 0.35;
+groupCellThresh = 0.25;
+offsetX = log10(15); % The PSI value at which the offset is calculated
 
 % We use a constant state of the rng given that the NMF is stochastic
 rng('default')
@@ -23,14 +24,14 @@ warning('off','stats:statrobustfit:IterationLimit');
 
 % Load file path
 dataPath = fileparts(fileparts(mfilename('fullpath')));
-spreadsheet ='UPenn Ipsi Summary_25ms_02062022.csv';
+spreadsheet ='UPENN Summary with IPSI Responses_02072022_SquintCheck.csv';
 
 % Choose subject and parameters. "Highest only" is the entire set of
-% subjects (minues subject 14596 who has full eye closure behavior)
-highestOnly = true;
+% subjects
+highestOnly = false;
 if highestOnly
-%         subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-%             14590, 14589, 14588, 14587, 14586};
+    %         subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    %             14590, 14589, 14588, 14587, 14586};
     subList = {15512, 15507, 15506, 15505, 14595, 14594, 14593, 14592, 14591, ...
         14590, 14589, 14588, 14587, 14586};
 else
@@ -38,14 +39,24 @@ else
         14587, 14586};
 end
 
+subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
+    14590, 14589, 14588, 14587, 14586};
+
+
+nSubs = length(subList);
+
+
 % The names of the blink features
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
     'closeTime', 'maxClosingVelocity', 'maxOpeningVelocity', 'blinkRate'};
 
 % These vector are used to re-order the blink features in plotting to more
 % easily show their grouping into dimensions.
-varIdxToUse = {[2 7 5 1 3 4 6 8 9],...
-    [2 7 5 1 3 4 6 8 9]};
+varIdxToUse = {[8 2 7 5 4 1 3 6],...
+    [8 2 7 5 4 1 3 6]};
+
+% The set of intended PSI values
+intendedPSI = [3.5,7.5,15,30,60];
 
 % create MATLAB table variable
 T = readtable(fullfile(dataPath,'data',spreadsheet));
@@ -56,6 +67,7 @@ slopesSessTwo = zeros(length(subList), length(varNamesToPlot));
 offsets = zeros(length(subList), length(varNamesToPlot));
 offsetsSessOne = zeros(length(subList), length(varNamesToPlot));
 offsetsSessTwo = zeros(length(subList), length(varNamesToPlot));
+meanResiduals = nan(length(subList),length(varNamesToPlot),length(intendedPSI));
 
 %% create slopes matrix containing the slope values for each var and subject
 for pp = 1:length(varNamesToPlot)
@@ -65,6 +77,7 @@ for pp = 1:length(varNamesToPlot)
         % find scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
+        scans = scans(ismember(scans.notSquint,'TRUE'),:);
         scans = scans(ismember(scans.numIpsi,(3:8)),:);
         if highestOnly
             A = scans(ismember(scans.intendedPSI, 15),:);
@@ -92,7 +105,15 @@ for pp = 1:length(varNamesToPlot)
         slopes(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
+
+        % Store the mean residual value by intended PSI
+        for kk=1:length(intendedPSI)
+            thisIdx = find(scans.intendedPSI==intendedPSI(kk));
+            if ~isempty(thisIdx)
+                meanResiduals(ss,pp,kk) = mean(fitObj.Residuals.Raw(thisIdx));
+            end
+        end
 
         % subject parameter data session 1
         y = sessOne.(allVarNames{ii});
@@ -106,7 +127,7 @@ for pp = 1:length(varNamesToPlot)
         slopesSessOne(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
 
         % subject parameter data session 2
         y = sessTwo.(allVarNames{ii});
@@ -120,7 +141,7 @@ for pp = 1:length(varNamesToPlot)
         slopesSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*median(x)+fitObj.Coefficients.Estimate(1);
+        offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
 
     end
 
@@ -131,6 +152,21 @@ allMeasures = {slopes, offsets};
 allMeasuresSessOne = {slopesSessOne,offsetsSessOne};
 allMeasuresSessTwo = {slopesSessTwo,offsetsSessTwo};
 allMeasureNames = {'slopes', 'offsets'};
+
+
+%% Residuals
+% Make a plot of the residuals for each measure across pressure
+figure
+for pp=1:length(varNamesToPlot)
+    subplot(3,3,pp);
+    plot(repmat(log10(intendedPSI),nSubs,1),squeeze(meanResiduals(:,pp,:)),'.k');
+    hold on
+    plot(log10(intendedPSI),nanmean(squeeze(meanResiduals(:,pp,:))),'or','MarkerFaceColor','r');
+    plot(log10(intendedPSI),nanmean(squeeze(meanResiduals(:,pp,:))),'-r');
+    title(varNamesToPlot{pp})
+end
+
+
 
 
 %% Dimensionality and reproducibility
@@ -167,14 +203,16 @@ for ii = 1:2
     % 2) define a coefficient matrix to initialize the NMF solution
 
     if ii==1
-        idxToFlip = contains(varNames,{'latency'});
-        coeff(1:3,1) = 1/sqrt(3); % velocity
-        coeff(4:7,2) = 1/sqrt(4); % depth
+        idxToFlip = contains(varNames,{'latency','closeTime'});
+        coeff(1:4,1) = 1/sqrt(4); % velocity
+        coeff(5:6,2) = 1/sqrt(2); % depth
+        coeff(7:8,2) = 1/sqrt(2); % depth
     end
 
     if ii==2
-        idxToFlip = contains(varNames,{'latency'});
-        coeff(2:7,1) = 1/sqrt(6); % overall blink response (speed and size)
+        idxToFlip = contains(varNames,{'latency','closeTime'});
+        coeff(2:7,1) = 1/sqrt(5); % overall blink response (speed and size)
+        coeff(1,2) = 1/sqrt(1); % overall blink response (speed and size)
     end
 
     % Apply the idxToFlip (sign inversion)
@@ -184,29 +222,18 @@ for ii = 1:2
     varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
 
     % Obtain an NMF solution. The NMF solution is stochastic. We search
-    % across many such solutions, and favor the solution that is the most
-    % sparse. We define sparse in this case as having coefficient values
-    % that are close to zero or one, and so penalize coefficients that are
-    % closer to 0.5.
-    fSparse = 1e6;
+    % across many such solutions, and favor the solution that groups the
+    % cells into the categories defined in coeff above
+    fVal = 1e6;
     for nn=1:1000
         [~,iterH] = nnmf(standardized,nDimensions,'H0',coeff');
-        penaltyMat = iterH;
-        penaltyMat(iterH>0.5) = -(iterH(iterH>0.5)-1);
-        thisSparse = norm(penaltyMat(:));
-        if thisSparse < fSparse && ~any(all(iterH'==0))
-            fSparse = thisSparse;
+        iterFval = norm(coeff-round(iterH)');
+        if iterFval < fVal && ~any(all(iterH'==0))
+            fVal = iterFval;
             H = iterH;
         end
     end
     coeff = H';
-
-    % If we are dealing with slopes, switch the order of the NMF dimensions
-    % to make plotting a bit easier. This is hacky, and will fail if the
-    % nDimensions passed is something other than 3.
-    if ii==1 && nDimensions==3
-        coeff=coeff(:,[2 1 3]);
-    end
 
     % Show the correlation matrices of the blink features
     dColors = {'b','g'};
