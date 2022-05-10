@@ -52,8 +52,8 @@ varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
 
 % These vector are used to re-order the blink features in plotting to more
 % easily show their grouping into dimensions.
-varIdxToUse = {[8 2 7 5 4 1 3 6],...
-    [8 2 7 5 4 1 3 6]};
+varIdxToUse = {[2 8 7 5 4 1 3 6],...
+    [2 8 7 5 4 1 3 6]};
 
 % The set of intended PSI values
 intendedPSI = [3.5,7.5,15,30,60];
@@ -167,8 +167,6 @@ for pp=1:length(varNamesToPlot)
 end
 
 
-
-
 %% Dimensionality and reproducibility
 % Loop over the set [slopes, offsets, (slopes offsets)], and for each data set perform an NMF
 % decomposition. Save the nmfResults struct and plot some diagnostics
@@ -206,13 +204,13 @@ for ii = 1:2
         idxToFlip = contains(varNames,{'latency','closeTime'});
         coeff(1:4,1) = 1/sqrt(4); % velocity
         coeff(5:6,2) = 1/sqrt(2); % depth
-        coeff(7:8,2) = 1/sqrt(2); % depth
+        coeff(7:8,3) = 1/sqrt(2); % depth
     end
 
     if ii==2
         idxToFlip = contains(varNames,{'latency','closeTime'});
-        coeff(2:7,1) = 1/sqrt(5); % overall blink response (speed and size)
-        coeff(1,2) = 1/sqrt(1); % overall blink response (speed and size)
+        coeff(3:7,1) = 1/sqrt(5); % overall blink response (speed and size)
+        coeff([1 8],2) = 1/sqrt(2); % overall blink response (speed and size)
     end
 
     % Apply the idxToFlip (sign inversion)
@@ -227,7 +225,7 @@ for ii = 1:2
     fVal = 1e6;
     for nn=1:1000
         [~,iterH] = nnmf(standardized,nDimensions,'H0',coeff');
-        iterFval = norm(coeff-round(iterH)');
+        iterFval = norm(coeff-iterH');
         if iterFval < fVal && ~any(all(iterH'==0))
             fVal = iterFval;
             H = iterH;
