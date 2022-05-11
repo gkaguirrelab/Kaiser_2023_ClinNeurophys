@@ -1,12 +1,16 @@
+
+
 %% timeSeriesAnalysis
 % Loads I-Files and conducts an analysis of time series data
 
 %% set up parameters
 
 % load file path
+
+dataPath = fileparts(fileparts(mfilename('fullpath')));
+
 subject = 14591;
-location = strcat('/Users/brianahaggerty/Documents/MATLAB/projects/blinkCNSAnalysis/data/iFiles/', num2str(subject),'/');
-dir(location);
+location = fullfile(dataPath,'data','iFiles',num2str(subject));
 
 % define scan numbers at each PSI level
 psiArray = [];
@@ -32,9 +36,9 @@ for ii = 1:52
    % make table from file
    [data,info] = read(ds);
    T = data;
-   subStr = eraseBetween(info.Filename,1,102);
-   subStr = extractBetween(subStr,"_",".csv");
-   scan = str2num(subStr{1});
+   [~,subStr] = fileparts(info.Filename);
+   subStr = split(subStr,'_'); subStr = subStr{end};
+   scan = str2num(subStr);
    allVarNames = T.Properties.VariableNames;
    
    % find stimulus arrival
@@ -100,9 +104,9 @@ for ii = 1:52
    % make table from file
    [data,info] = read(ds);
    T = data;
-   subStr = eraseBetween(info.Filename,1,102);
-   subStr = extractBetween(subStr,"_",".csv");
-   scan = str2num(subStr{1});
+   [~,subStr] = fileparts(info.Filename);
+   subStr = split(subStr,'_'); subStr = subStr{end};
+   scan = str2num(subStr);
    allVarNames = T.Properties.VariableNames;
    
    if scan == scanNum
@@ -181,9 +185,9 @@ for pp = 1:5
        % make table from file
        [data,info] = read(ds);
        T = data;
-       subStr = eraseBetween(info.Filename,1,102);
-       subStr = extractBetween(subStr,"_",".csv");
-       scan = str2num(subStr{1});
+   [~,subStr] = fileparts(info.Filename);
+   subStr = split(subStr,'_'); subStr = subStr{end};
+   scan = str2num(subStr);
        allVarNames = T.Properties.VariableNames;
 
        if ismember(scan,psiArray(:,pp))
