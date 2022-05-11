@@ -2,7 +2,7 @@
 % This script loads a blink data set into a MATLAB table variable. When
 % run, it will aggregate data for a given subject for the given parameters
 % across sessions. The routine then conducts an analysis of the
-% dimensionality of the measures. A NMF (favored for sparsity) is
+% dimensionality of the measures. A grouping of the measures is
 % performed, and the test / re-test reliability of the session data is then
 % examined after projection to these dimensions.
 
@@ -10,9 +10,11 @@
 clear; close all
 
 % Some constants for the analysis
-nDimensions = 3;
-groupCellThresh = 0.25;
+nDimensions = 2;
+groupCellThresh = 0.1;
+minValidIpsiBlinksPerAcq = 3;
 offsetX = log10(15); % The PSI value at which the offset is calculated
+figHandles = {};
 
 % We use a constant state of the rng given that the NMF is stochastic
 rng('default')
@@ -26,25 +28,11 @@ warning('off','stats:statrobustfit:IterationLimit');
 dataPath = fileparts(fileparts(mfilename('fullpath')));
 spreadsheet ='UPENN Summary with IPSI Responses_02072022_SquintCheck.csv';
 
-% Choose subject and parameters. "Highest only" is the entire set of
-% subjects
-highestOnly = false;
-if highestOnly
-    %         subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    %             14590, 14589, 14588, 14587, 14586};
-    subList = {15512, 15507, 15506, 15505, 14595, 14594, 14593, 14592, 14591, ...
-        14590, 14589, 14588, 14587, 14586};
-else
-    subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-        14587, 14586};
-end
-
+% List of subjects
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
-    14590, 14589, 14588, 14587, 14586};
-
+    14590, 14589, 14588, 14587, 14586, 15513, 15514};
 
 nSubs = length(subList);
-
 
 % The names of the blink features
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
@@ -52,8 +40,8 @@ varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
 
 % These vector are used to re-order the blink features in plotting to more
 % easily show their grouping into dimensions.
-varIdxToUse = {[2 8 7 5 4 1 3 6],...
-    [2 8 7 5 4 1 3 6]};
+varIdxToUse = {[2 5 7 8 4 1 3 6],...
+    [2 5 7 8 4 1 3 6]};
 
 % The set of intended PSI values
 intendedPSI = [3.5,7.5,15,30,60];
@@ -70,22 +58,19 @@ offsetsSessTwo = zeros(length(subList), length(varNamesToPlot));
 meanResiduals = nan(length(subList),length(varNamesToPlot),length(intendedPSI));
 
 %% create slopes matrix containing the slope values for each var and subject
+
 for pp = 1:length(varNamesToPlot)
 
     for ss = 1:length(subList)
 
-        % find scans for desired subject
+        % find valid scans for desired subject
         scans = T(ismember(T.subjectID,subList{ss}),:);
         scans = scans(ismember(scans.valid,'TRUE'),:);
         scans = scans(ismember(scans.notSquint,'TRUE'),:);
-        scans = scans(ismember(scans.numIpsi,(3:8)),:);
-        if highestOnly
-            A = scans(ismember(scans.intendedPSI, 15),:);
-            B = scans(ismember(scans.intendedPSI, 30),:);
-            C = scans(ismember(scans.intendedPSI, 60),:);
-            scans = vertcat(A, B, C);
-        end
-        ii = find(strcmp(varNamesToPlot{pp},allVarNames));
+        scans = scans(scans.numIpsi>=minValidIpsiBlinksPerAcq,:);
+
+        % Grab the scan data for the particular blink feature
+        thisFeatureIdx = find(strcmp(varNamesToPlot{pp},allVarNames));
         weights = scans.numIpsi;
         dates = unique(scans.scanDate);
         sessOne = scans(ismember(scans.scanDate,dates(1,1)),:);
@@ -94,7 +79,7 @@ for pp = 1:length(varNamesToPlot)
         weightsSessTwo = sessTwo.numIpsi;
 
         % subject parameter data across sessions
-        y = scans.(allVarNames{ii});
+        y = scans.(allVarNames{thisFeatureIdx});
         goodPoints = ~isnan(y);
         x = log10(scans.PSI);
         x = x(goodPoints);
@@ -104,19 +89,19 @@ for pp = 1:length(varNamesToPlot)
         fitObj = fitlm(x,y,'RobustOpts', 'on', 'Weight', weights);
         slopes(ss, pp) = fitObj.Coefficients.Estimate(2);
 
-        % Get the y value at median x and it will be our offset
+        % Get the y value specified offsetX position
         offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
 
         % Store the mean residual value by intended PSI
         for kk=1:length(intendedPSI)
-            thisIdx = find(scans.intendedPSI==intendedPSI(kk));
-            if ~isempty(thisIdx)
-                meanResiduals(ss,pp,kk) = mean(fitObj.Residuals.Raw(thisIdx));
+            thisPSIIdx = find(scans.intendedPSI==intendedPSI(kk));
+            if ~isempty(thisPSIIdx)
+                meanResiduals(ss,pp,kk) = mean(fitObj.Residuals.Raw(thisPSIIdx));
             end
         end
 
         % subject parameter data session 1
-        y = sessOne.(allVarNames{ii});
+        y = sessOne.(allVarNames{thisFeatureIdx});
         goodPoints = ~isnan(y);
         x = log10(sessOne.PSI);
         x = x(goodPoints);
@@ -130,7 +115,7 @@ for pp = 1:length(varNamesToPlot)
         offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
 
         % subject parameter data session 2
-        y = sessTwo.(allVarNames{ii});
+        y = sessTwo.(allVarNames{thisFeatureIdx});
         goodPoints = ~isnan(y);
         x = log10(sessTwo.PSI);
         x = x(goodPoints);
@@ -156,26 +141,32 @@ allMeasureNames = {'slopes', 'offsets'};
 
 %% Residuals
 % Make a plot of the residuals for each measure across pressure
-figure
+figHandles{end+1} = figure();
 for pp=1:length(varNamesToPlot)
     subplot(3,3,pp);
-    plot(repmat(log10(intendedPSI),nSubs,1),squeeze(meanResiduals(:,pp,:)),'.k');
+    plot([0.25 2],[0 0],':','Color',[0.5 0.5 0.5]);
     hold on
+    plot(repmat(log10(intendedPSI),nSubs,1),squeeze(meanResiduals(:,pp,:)),'.k');
     plot(log10(intendedPSI),nanmean(squeeze(meanResiduals(:,pp,:))),'or','MarkerFaceColor','r');
     plot(log10(intendedPSI),nanmean(squeeze(meanResiduals(:,pp,:))),'-r');
     title(varNamesToPlot{pp})
+    xlim([0.25 2]);
+    if pp==1
+        xlabel('log PSI');
+        ylabel('blink measure');
+    end
 end
 
 
 %% Dimensionality and reproducibility
-% Loop over the set [slopes, offsets, (slopes offsets)], and for each data set perform an NMF
-% decomposition. Save the nmfResults struct and plot some diagnostics
-
-% Prepare a figure
-figure
+% Loop over the set [slopes, offsets, (slopes offsets)], and for each data
+% set group the measures and produce some test / retest plots
 
 % Loop over the two parameters of the model fit (slope and offset)
 for ii = 1:2
+
+    % Prepare a figure
+    figHandles{end+1} = figure();
 
     % Z-score standardize the measures
     standardized = (allMeasures{ii}-mean(allMeasures{ii}))./std(allMeasures{ii});
@@ -202,15 +193,14 @@ for ii = 1:2
 
     if ii==1
         idxToFlip = contains(varNames,{'latency','closeTime'});
-        coeff(1:4,1) = 1/sqrt(4); % velocity
-        coeff(5:6,2) = 1/sqrt(2); % depth
-        coeff(7:8,3) = 1/sqrt(2); % depth
+        coeff(1:4,1) = 1/4; % velocity
+        coeff(5:8,2) = 1/4; % depth
     end
 
     if ii==2
         idxToFlip = contains(varNames,{'latency','closeTime'});
-        coeff(3:7,1) = 1/sqrt(5); % overall blink response (speed and size)
-        coeff([1 8],2) = 1/sqrt(2); % overall blink response (speed and size)
+        coeff(1:7,1) = 1/7; % overall blink response (speed and size)
+        coeff(8,2) = 1/1; % The other feature
     end
 
     % Apply the idxToFlip (sign inversion)
@@ -219,24 +209,10 @@ for ii = 1:2
     sessionTwoStandard(:,idxToFlip) = -sessionTwoStandard(:,idxToFlip);
     varNames(idxToFlip) = strcat(varNames(idxToFlip),'_Neg');
 
-    % Obtain an NMF solution. The NMF solution is stochastic. We search
-    % across many such solutions, and favor the solution that groups the
-    % cells into the categories defined in coeff above
-    fVal = 1e6;
-    for nn=1:1000
-        [~,iterH] = nnmf(standardized,nDimensions,'H0',coeff');
-        iterFval = norm(coeff-iterH');
-        if iterFval < fVal && ~any(all(iterH'==0))
-            fVal = iterFval;
-            H = iterH;
-        end
-    end
-    coeff = H';
-
     % Show the correlation matrices of the blink features
     dColors = {'b','g'};
-    subplot(4,2,ii)
-    corrMap = corr(standardized,'Type','Kendall');
+    subplot(1,3,1)
+    corrMap = corr(standardized);
     corrMap(1:(length(varNames)+1):end)=nan;
     imAlpha=ones(size(corrMap));
     imAlpha(isnan(corrMap))=0;
@@ -256,13 +232,6 @@ for ii = 1:2
         rectangle('Position',[xx-0.5 xx-0.5 hw hw],'EdgeColor',dColors{dd},'LineWidth',2);
     end
 
-    % Make a plot of the dimension weights
-    subplot(4,2,2+ii)
-    b=bar(coeff(:,1:2));
-    ylabel('coefficient');
-    b(1).FaceColor=dColors{1}; b(2).FaceColor=dColors{2};
-    axis square
-
     % Project the separate sessions onto the first two dimensions of the
     % coefficients
     sessionBothProjected = standardized*coeff(:,1:2);
@@ -277,8 +246,10 @@ for ii = 1:2
 
     % Plot test / retest plots for the two parameters (slope, offset)
     for dd=1:2
-        subplot(4,2,2+ii+dd*2)
-        mdl = fitlm(sessionOneProjected(:,dd), sessionTwoProjected(:,dd),'RobustOpts','on');
+        subplot(1,3,1+dd)
+        x = sessionOneProjected(:,dd);
+        y = sessionTwoProjected(:,dd);
+        mdl = fitlm(x,y,'RobustOpts','on');
         plot(mdl, 'Marker', 'o', 'MarkerEdgeColor','none', 'MarkerFaceColor',dColors{dd})
         legend off
         xlabel(sprintf('Session 1 projected onto d%d',dd))
@@ -287,10 +258,15 @@ for ii = 1:2
         xlim([-zRange zRange])
         ylim([-zRange zRange])
         axis square
-        title([allMeasureNames{ii} sprintf(' d%d',dd)]);
+        title([allMeasureNames{ii} sprintf(' d%d, R=%2.2f',dd,sqrt(mdl.Rsquared.Adjusted))]);
     end
 
 end
 
 % Restore the warning state
 warning(warnState);
+
+% Correlation of offset and slope parameters
+corr(results.slopes(:,1),results.slopes(:,2))
+corr(results.slopes(:,1),results.offsets(:,1))
+corr(results.slopes(:,2),results.offsets(:,1))
