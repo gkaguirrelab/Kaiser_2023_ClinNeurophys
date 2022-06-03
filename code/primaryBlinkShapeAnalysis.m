@@ -20,14 +20,17 @@
 % during which subjects engaged in a "squint" behavior, in that they closed
 % their eyes and never subsequently opened them.
 %
-% The data are combined across sessions, and the 17x5 (subjectxpressure)
+% The data are combined across sessions, and the 17x5 (subject x pressure)
 % blink responses are subjected to an Independent Component Analysis,
 % intialized with the mean chained derivatives of the average blink
-% response. 
+% response.
 
 % housekeeping
 close all
 clear
+
+% Flag to control if the ICA is intialized with a derivative set
+initializeICA = false;
 
 % List of subject IDs
 subjectIDs = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
@@ -60,7 +63,6 @@ end
 % Call the function once more to grab a temporal support
 [~,temporalSupport]=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), 2);
 
-
 % Reshape into a matrix
 X_ICA = reshape(X,nSubs*nPSIs,nTimePoints);
 X1_ICA = reshape(X1,nSubs*nPSIs,nTimePoints);
@@ -81,6 +83,7 @@ q = 4; % four dimensions
 
 % Create some initial weights which are smoothed derivatives of the average
 % blink response
+if initializeICA
 initialWeights = zeros(nTimePoints,q);
 initialWeights(:,1)=mean(X_ICA);
 options = fitoptions('Method','Smooth','SmoothingParam',0.2);
@@ -94,17 +97,28 @@ initialWeights=initialWeights./vecnorm(initialWeights);
 % ICA time
 Mdl = rica(X_ICA,q,'InitialTransformWeights',initialWeights);
 
-% Derive the coefficients, and flip the sign of the 4th component coeffs
-X_ICAcoeff = Mdl.transform(X_ICA);
-X_ICAcoeff(:,4) = -X_ICAcoeff(:,4);
-X1_ICAcoeff = Mdl.transform(X1_ICA);
-X1_ICAcoeff(:,4) = -X1_ICAcoeff(:,4);
-X2_ICAcoeff = Mdl.transform(X2_ICA);
-X2_ICAcoeff(:,4) = -X2_ICAcoeff(:,4);
+else
 
-% Extract the components, and flip the sign of the 4th component
+    Mdl = rica(X_ICA,q);
+
+end
+
+% Derive the coefficients
+X_ICAcoeff = Mdl.transform(X_ICA);
+X1_ICAcoeff = Mdl.transform(X1_ICA);
+X2_ICAcoeff = Mdl.transform(X2_ICA);
+
+% Extract the components
 components = Mdl.TransformWeights;
-components(:,4) = -components(:,4);
+
+% Flip some signs if we used the initialize weights, which has an effect
+% upon the (arbitrary) signs of the ICA components
+if initializeICA
+    X_ICAcoeff(:,4) = -X_ICAcoeff(:,4);
+    X1_ICAcoeff(:,4) = -X1_ICAcoeff(:,4);
+    X2_ICAcoeff(:,4) = -X2_ICAcoeff(:,4);
+    components(:,4) = -components(:,4);
+end
 
 % Generate the fit
 X_ICAfit = components*X_ICAcoeff';
@@ -121,16 +135,16 @@ X2coeff(goodIdx,:)=X2_ICAcoeff;
 X2coeff = reshape(X2coeff,nSubs,nPSIs,q);
 Xfit = nan(nSubs*nPSIs,nTimePoints);
 Xfit(goodIdx,:) = X_ICAfit';
-Xfit = reshape(Xfit,nSubs,nPSIs,161);
+Xfit = reshape(Xfit,nSubs,nPSIs,nTimePoints);
 
 % Fit a slope to the first and fourth component coefficients
 for ii=1:nSubs
-    ampPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,1),1);    
-    ampPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,1),1);    
-    ampPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,1),1);    
-    speedPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,4),1);    
-    speedPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,4),1);    
-    speedPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,4),1);    
+    ampPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,1),1);
+    ampPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,1),1);
+    ampPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,1),1);
+    speedPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,4),1);
+    speedPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,4),1);
+    speedPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,4),1);
 end
 
 %% Create some plots
@@ -138,7 +152,7 @@ end
 % Define a gray-to-red color set for puff-pressure
 psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
 
-% Average blink response by puff pressure 
+% Average blink response by puff pressure
 figure
 tmp = squeeze(mean(X,1));
 for pp = 1:nPSIs
@@ -150,14 +164,30 @@ ylabel('blink depth [pixels]');
 
 % Illustration of the ICA components
 figure
-componentColors = [0 0 0; 0.75 0.75 0.75; 0.75 0.75 0.75; 0 0 1];
-for cc = 1:q
-    plot(temporalSupport,components(:,cc),'-','Color',componentColors(cc,:),'LineWidth',1.5)
+componentNames = {'amplitude','shape1','shape2','speed'};
+componentColors = [0 0 0; 0.85 0.85 0.85; 0.65 0.65 0.65; 0 0 1];
+componentWidths = [1.5, 1, 1, 1.5];
+plotOrder = [1 4 2 3];
+for cc = plotOrder
+    plot(temporalSupport,components(:,cc),'-','Color',componentColors(cc,:),'LineWidth',componentWidths(cc))
     hold on
 end
-legend({'amplitude','shape1','shape2','speed'})
+legend(componentNames(plotOrder))
 xlabel('time [msecs]');
 ylabel('componnt value [a.u.]');
+
+% Plot of the coefficients by puff pressure
+figure
+meanCoeff = squeeze(mean(Xcoeff,1));
+semCoeff = squeeze(std(Xcoeff,1))./sqrt(nSubs);
+for cc=1:4
+    subplot(2,2,cc)
+    for pp = 1:nPSIs
+        plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanCoeff(pp,cc)+semCoeff(:,cc),meanCoeff(pp,cc)-semCoeff(:,cc)],'-k');
+        hold on
+        plot(log10(targetPSISet(pp)),meanCoeff(pp,cc),'o','Color',componentColors(cc,:));
+    end
+end
 
 % Calculate the correlation of the fit with each average blink response
 for ss=1:nSubs
@@ -170,14 +200,18 @@ end
 figure
 subplot(2,2,1);
 plot(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2),'ok'); axis square
-title('amplitude offset');
+refline(1,0);
+title(sprintf('amplitude offset, r=%2.2f',corr(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2))));
 subplot(2,2,2);
 plot(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2),'ob'); xlim([-50 150]); ylim([-50 150]); axis square
-title('speed offset');
+refline(1,0);
+title(sprintf('speed offset, r=%2.2f',corr(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2))));
 subplot(2,2,3);
 plot(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1),'ok'); xlim([0 200]); ylim([0 200]);axis square
-title('amplitude slope');
+refline(1,0);
+title(sprintf('amplitude slope, r=%2.2f',corr(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1))));
 subplot(2,2,4);
 plot(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1),'ob'); xlim([-20 80]); ylim([-20 80]);axis square
-title('speed slope');
+refline(1,0);
+title(sprintf('speed slope, r=%2.2f',corr(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1))));
 
