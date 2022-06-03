@@ -13,7 +13,8 @@ clear; close all
 nDimensions = 2;
 groupCellThresh = 0.1;
 minValidIpsiBlinksPerAcq = 3;
-offsetX = log10(15); % The PSI value at which the offset is calculated
+offsetX = 15;
+offsetXlog = log10(offsetX); % The PSI value at which the offset is calculated
 figHandles = {};
 
 % We use a constant state of the rng given that the NMF is stochastic
@@ -31,8 +32,8 @@ spreadsheet ='UPENN Summary with IPSI Responses_02072022_SquintCheck.csv';
 % List of subjects
 subList = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586, 15513, 15514};
-
 nSubs = length(subList);
+results.subList = subList;
 
 % The names of the blink features
 varNamesToPlot = {'auc', 'latency', 'timeUnder', 'openTime', 'initVelocity', ...
@@ -90,7 +91,7 @@ for pp = 1:length(varNamesToPlot)
         slopes(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value specified offsetX position
-        offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
+        offsets(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetXlog+fitObj.Coefficients.Estimate(1);
 
         % Store the mean residual value by intended PSI
         for kk=1:length(intendedPSI)
@@ -112,7 +113,7 @@ for pp = 1:length(varNamesToPlot)
         slopesSessOne(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
+        offsetsSessOne(ss,pp) = fitObj.Coefficients.Estimate(2)*offsetXlog+fitObj.Coefficients.Estimate(1);
 
         % subject parameter data session 2
         y = sessTwo.(allVarNames{thisFeatureIdx});
@@ -126,7 +127,7 @@ for pp = 1:length(varNamesToPlot)
         slopesSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2);
 
         % Get the y value at median x and it will be our offset
-        offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*offsetX+fitObj.Coefficients.Estimate(1);
+        offsetsSessTwo(ss, pp) = fitObj.Coefficients.Estimate(2)*offsetXlog+fitObj.Coefficients.Estimate(1);
 
     end
 
@@ -234,9 +235,9 @@ for ii = 1:2
 
     % Project the separate sessions onto the first two dimensions of the
     % coefficients
-    sessionBothProjected = standardized*coeff(:,1:2);
-    sessionOneProjected = sessionOneStandard*coeff(:,1:2);
-    sessionTwoProjected = sessionTwoStandard*coeff(:,1:2);
+    sessionBothProjected = standardized*coeff;
+    sessionOneProjected = sessionOneStandard*coeff;
+    sessionTwoProjected = sessionTwoStandard*coeff;
 
     % Store the results
     results.(allMeasureNames{ii}) = sessionBothProjected;
@@ -270,3 +271,39 @@ warning(warnState);
 corr(results.slopes(:,1),results.slopes(:,2))
 corr(results.slopes(:,1),results.offsets(:,1))
 corr(results.slopes(:,2),results.offsets(:,1))
+
+%% Plots to illustrate extremes of parameters
+figure
+[~,idx]=min(results.offsets(:,1));
+[blinkVector,temporalSupport] = returnBlinkTimeSeries( subList{idx}, offsetX );
+plot(temporalSupport,blinkVector,'-k');
+hold on
+[~,idx]=max(results.offsets(:,1));
+[blinkVector,temporalSupport] = returnBlinkTimeSeries( subList{idx}, offsetX );
+plot(temporalSupport,blinkVector,'-r');
+
+figure
+subplot(2,2,1)
+idx=2;
+for ii=1:3
+    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subList{idx}, intendedPSI(ii+2) );
+    lineColor = [0.75 0.75 0.75]-([0.25 0.25 0.25].*ii);
+    plot(temporalSupport,blinkVector,'-','Color',lineColor);
+    hold on
+end
+subplot(2,2,2)
+idx=9;
+for ii=1:3
+    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subList{idx}, intendedPSI(ii+2) );
+    lineColor = [0.75 0 0]-([0.25 0 0].*ii);
+    plot(temporalSupport,blinkVector,'-','Color',lineColor);
+    hold on
+end
+subplot(2,2,3)
+idx=12;
+for ii=1:3
+    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subList{idx}, intendedPSI(ii+2) );
+    lineColor = [0.75 0 0]-([0.25 0 0].*ii);
+    plot(temporalSupport,blinkVector,'-','Color',lineColor);
+    hold on
+end
