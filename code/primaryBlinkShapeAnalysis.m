@@ -41,6 +41,11 @@ nSubs = length(subjectIDs);
 targetPSISet = [3.5,7.5,15,30,60];
 nPSIs = length(targetPSISet);
 
+% A log-transformed version of the PSI values to use for fitting later
+    xVals = log10(targetPSISet);
+    xValMid = xVals(3);
+    xVals = xVals - xValMid;
+
 % The number of time-points
 nTimePoints = 161;
 
@@ -73,6 +78,7 @@ goodIdx = ~any(isnan(X_ICA'));
 X_ICA = X_ICA(goodIdx,:);
 X1_ICA = X1_ICA(goodIdx,:);
 X2_ICA = X2_ICA(goodIdx,:);
+
 
 %% Conduct the ICA
 % After some trial-and-error, I find that 4 dimensions fits the data
@@ -138,8 +144,6 @@ Xfit(goodIdx,:) = X_ICAfit';
 Xfit = reshape(Xfit,nSubs,nPSIs,nTimePoints);
 
 % Fit a slope to the first and fourth component coefficients
-xVals = log10(targetPSISet);
-xVals = xVals - xVals(3);
 for ii=1:nSubs
     ampPuffCoeff(ii,:)=polyfit(xVals,Xcoeff(ii,:,1),1);
     ampPuffCoeff1(ii,:)=polyfit(xVals,X1coeff(ii,:,1),1);
@@ -190,15 +194,13 @@ for cc=1:4
         plot(log10(targetPSISet(pp)),meanCoeff(pp,cc),'o','Color',componentColors(cc,:));
     end
     % Add a linear fit line
-    xVals = log10(targetPSISet);
-    xValMid = xVals(3);
-    xVals = xVals - xValMid;
     if cc==4
-    pp = polyfit(xVals(2:end),meanCoeff(2:end,cc),1);
-    plot([xVals(2)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(2) xVals(end)]),'-r')
+        pp = polyfit(xVals(2:end),meanCoeff(2:end,cc),1);
+        plot([xVals(2)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(2) xVals(end)]),'-r')
+        plot([xVals(1)+xValMid xVals(2)+xValMid],polyval(pp,[xVals(2) xVals(2)]),'-r')
     else
-    pp = polyfit(xVals,meanCoeff(:,cc),1);
-    plot([xVals(1)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(1) xVals(end)]),'-r')
+        pp = polyfit(xVals,meanCoeff(:,cc),1);
+        plot([xVals(1)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(1) xVals(end)]),'-r')
     end
 end
 
@@ -212,19 +214,19 @@ end
 % Show scatter plots of test / retest of overall amplitude and speed
 figure
 subplot(2,2,1);
-plot(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2),'ok'); axis square
+plot(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2),'ok'); xlim([0 1000]); ylim([0 1000]); axis square
 refline(1,0);
 title(sprintf('amplitude offset, r=%2.2f',corr(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2))));
 subplot(2,2,2);
-plot(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2),'ob'); xlim([-50 150]); ylim([-50 150]); axis square
+plot(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2),'ob'); xlim([-150 150]); ylim([-150 150]); axis square
 refline(1,0);
 title(sprintf('speed offset, r=%2.2f',corr(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2))));
 subplot(2,2,3);
-plot(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1),'ok'); xlim([0 200]); ylim([0 200]);axis square
+plot(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1),'ok'); xlim([0 700]); ylim([0 700]);axis square
 refline(1,0);
 title(sprintf('amplitude slope, r=%2.2f',corr(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1))));
 subplot(2,2,4);
-plot(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1),'ob'); xlim([-20 80]); ylim([-20 80]);axis square
+plot(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1),'ob'); xlim([-100 300]); ylim([-100 300]);axis square
 refline(1,0);
 title(sprintf('speed slope, r=%2.2f',corr(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1))));
 
