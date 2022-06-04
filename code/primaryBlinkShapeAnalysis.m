@@ -138,13 +138,15 @@ Xfit(goodIdx,:) = X_ICAfit';
 Xfit = reshape(Xfit,nSubs,nPSIs,nTimePoints);
 
 % Fit a slope to the first and fourth component coefficients
+xVals = log10(targetPSISet);
+xVals = xVals - xVals(3);
 for ii=1:nSubs
-    ampPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,1),1);
-    ampPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,1),1);
-    ampPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,1),1);
-    speedPuffCoeff(ii,:)=polyfit(-2:2,Xcoeff(ii,:,4),1);
-    speedPuffCoeff1(ii,:)=polyfit(-2:2,X1coeff(ii,:,4),1);
-    speedPuffCoeff2(ii,:)=polyfit(-2:2,X2coeff(ii,:,4),1);
+    ampPuffCoeff(ii,:)=polyfit(xVals,Xcoeff(ii,:,1),1);
+    ampPuffCoeff1(ii,:)=polyfit(xVals,X1coeff(ii,:,1),1);
+    ampPuffCoeff2(ii,:)=polyfit(xVals,X2coeff(ii,:,1),1);
+    speedPuffCoeff(ii,:)=polyfit(xVals(2:end),Xcoeff(ii,2:end,4),1);
+    speedPuffCoeff1(ii,:)=polyfit(xVals(2:end),X1coeff(ii,2:end,4),1);
+    speedPuffCoeff2(ii,:)=polyfit(xVals(2:end),X2coeff(ii,2:end,4),1);
 end
 
 %% Create some plots
@@ -186,6 +188,17 @@ for cc=1:4
         plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanCoeff(pp,cc)+semCoeff(:,cc),meanCoeff(pp,cc)-semCoeff(:,cc)],'-k');
         hold on
         plot(log10(targetPSISet(pp)),meanCoeff(pp,cc),'o','Color',componentColors(cc,:));
+    end
+    % Add a linear fit line
+    xVals = log10(targetPSISet);
+    xValMid = xVals(3);
+    xVals = xVals - xValMid;
+    if cc==4
+    pp = polyfit(xVals(2:end),meanCoeff(2:end,cc),1);
+    plot([xVals(2)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(2) xVals(end)]),'-r')
+    else
+    pp = polyfit(xVals,meanCoeff(:,cc),1);
+    plot([xVals(1)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(1) xVals(end)]),'-r')
     end
 end
 
