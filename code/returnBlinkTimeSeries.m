@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials] = returnBlinkTimeSeries( subjectID, targetPSI, sessionID, minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw] = returnBlinkTimeSeries( subjectID, targetPSI, sessionID, minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -51,6 +51,9 @@ end
 % Set a counter to return
 nTrials = 0;
 
+% Initialize a vector for return
+blinkVectorRaw = [];
+
 % Define the location of the i-files
 dataDirPath = fileparts(fileparts(mfilename('fullpath')));
 
@@ -85,7 +88,6 @@ scanTable = scanTable(scanTable.intendedPSI==targetPSI,:);
 if minValidIpsiBlinksPerAcq > 0
     scanTable = scanTable(ismember(scanTable.valid,'TRUE'),:);
 end
-
 
 % Handle working with session 1, 2, or both
 if nargin>2 && ~isempty(scanTable)
@@ -172,13 +174,18 @@ for ii = 1:size(scanTable,1)
         nTrials = nTrials + 1;
 
     end
-
+    
     % center pre-stimulus around zero
-    pos = nanmean(pos);
-    pos = pos - mean(pos(1:nSamplesBeforeStim));
+    posAvg = nanmean(pos);
+    posAvgPreStim = mean(posAvg(1:nSamplesBeforeStim));
+    posAvg = posAvg - posAvgPreStim;
 
     % Store the response
-    respByAcq(ii,:) = pos;
+    respByAcq(ii,:) = posAvg;
+
+    % Create a concatenated, raw vector of responses
+    blinkVectorRaw = [blinkVectorRaw, reshape(pos',1,numel(pos))-posAvgPreStim];
+
 end
 
 % Restore the warning state
