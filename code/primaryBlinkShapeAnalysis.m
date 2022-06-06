@@ -29,6 +29,9 @@
 close all
 clear
 
+% Get the location to save plots
+plotSaveDir = getpref('blinkCNSAnalysis','plotSaveDir');
+
 % List of subject IDs
 subjectIDs = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586, 15513, 15514};
@@ -67,6 +70,7 @@ end
 
 % Call the function once more to grab the temporal support
 [~,temporalSupport]=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), 2);
+[~,zeroIdx]=min(abs(temporalSupport));
 
 % Reshape into a matrix
 X_ICA = reshape(X,nSubs*nPSIs,nTimePoints);
@@ -138,7 +142,7 @@ psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
 psiAcqOrder = [4 4 1 3 5 5 3 1 2 4 2 2 1 5 4 3 3 4 5 2 3 2 5 1 1 4];
 figure
 set(gcf, 'Position',  [100, 100, 560, 200])
-subplot(2,1,1)
+subplot(3,2,1:2)
 plotIdx = 1;
 dash = 10;
 dot = 2;
@@ -150,9 +154,9 @@ end
 xlim([1 plotIdx])
 axis off
 
-subplot(2,1,2)
-subjectID = 14591;
-[~,temporalSupport,nTrials,blinkVectorRaw] = returnBlinkTimeSeries( 14591, [], 1 );
+subplot(3,2,3:4)
+subjectID = 14594;
+[~,~,~,blinkVectorRaw] = returnBlinkTimeSeries( subjectID, [], 1 );
 spacing = 10;
 plotIdx = (nTimePoints)*nBlinksPerAcq;
 blinkIdx = 1;
@@ -164,22 +168,50 @@ for aa=2:length(psiAcqOrder)
         blinkIdx = blinkIdx+1;
     end
 end
+plot([0 0],[0 -250],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
+t=text(-600,-250,'250 pixels');
+t.Rotation = 90;
+plot([0 1000],[-250 -250],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
+t=text(0,-150,'1s');
 xlim([1 plotIdx])
 axis off
+title(num2str(subjectID));
 
-% Average blink response by puff pressure
+for ss=1:2
+    subplot(3,2,ss+4)
+    for pp=1:nPSIs
+        plot(temporalSupport, returnBlinkTimeSeries( subjectID, targetPSISet(pp), ss ), '-', 'Color', psiColors(pp,:),'LineWidth',1.5);
+        if pp==1;hold on; end
+    end
+    axis off
+    plot([0 0],[-125 25],'-b')
+    title(sprintf('Session %d',ss));
+    if ss==1
+    plot([-100 -100],[0 -125],'-','Color',[0.5 0.5 0.5],'LineWidth',2)    
+    plot([-100 0],[-125 -125],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
+    t=text(-100,-50,'100 msec');
+    t=text(-175,-100,'125 pixels');
+    t.Rotation = 90;
+    end
+end
+saveas(gcf,fullfile(plotSaveDir,'acquisitionOrder.pdf'));
+
+
+%% Average blink response by puff pressure
 figure
 tmpX = squeeze(mean(X,1));
 tmpXfit = squeeze(mean(Xfit,1));
 for pp = 1:nPSIs
     plot(temporalSupport,tmpX(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
     hold on
-    plot(temporalSupport,tmpXfit(pp,:),':','Color',psiColors(pp,:),'LineWidth',1.5)
+    plot(temporalSupport,tmpXfit(pp,:),'--','Color',psiColors(pp,:),'LineWidth',1.5)
 end
 xlabel('time [msecs]');
 ylabel('blink depth [pixels]');
+saveas(gcf,fullfile(plotSaveDir,'averageBlnkResponseByPSI.pdf'));
 
-% Illustration of the ICA components
+
+%% Illustration of the ICA components
 figure
 componentNames = {'amplitude','shape1','shape2','speed'};
 componentColors = [0 0 0; 0.85 0.85 0.85; 0.65 0.65 0.65; 0 0 1];
@@ -192,6 +224,8 @@ end
 legend(componentNames(plotOrder))
 xlabel('time [msecs]');
 ylabel('component value [a.u.]');
+saveas(gcf,fullfile(plotSaveDir,'ICAcomponents.pdf'));
+
 
 % Plot of the coefficients by puff pressure
 figure
@@ -214,6 +248,7 @@ for cc=1:4
         plot([xVals(1)+xValMid xVals(end)+xValMid],polyval(pp,[xVals(1) xVals(end)]),'-r')
     end
 end
+saveas(gcf,fullfile(plotSaveDir,'coefficientsByPSI.pdf'));
 
 
 % Calculate the correlation of the fit with each average blink response
@@ -222,6 +257,7 @@ for ss=1:nSubs
         varExplained(ss,pp) = corr(squeeze(X(ss,pp,:)),squeeze(Xfit(ss,pp,:)))^2';
     end
 end
+fprintf('The mean [range] of R^2 of model fit to blink is %2.2f [%2.2f - %2.2f]\n',mean(varExplained(:)),min(varExplained(:)),max(varExplained(:)))
 
 % Show scatter plots of test / retest of overall amplitude and speed
 limVals = {...
@@ -249,13 +285,13 @@ for cc=1:2
         title(titleStr);
     end
 end
+saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
 
 
 %% Illustration of all blink responses and ICA model fit
 figure
-nPSIs = 5;
-betweenSubGap = 3;
-[~,zeroIdx]=min(abs(temporalSupport));
+betweenSubGap = 1;
+grayScaleRangePixels = [50 -200];
 
 % Loop over the three display panels
 for xx = 1:3
@@ -277,14 +313,12 @@ for xx = 1:3
 
     % Map uniC to the 0-1 range. We store the scaling factors to use them
     % for all three matrix displays.
-    if xx == 1
-        minX = min(uniC(:));
-        uniC = uniC-minX;
-        maxAbsX = max(abs(uniC(:)));
-        uniC = uniC ./ maxAbsX;
-    else
-        uniC = uniC-minX;
-        uniC = uniC ./ maxAbsX;
+    uniC(uniC>grayScaleRangePixels(1))=grayScaleRangePixels(1);
+    uniC(uniC<grayScaleRangePixels(2))=grayScaleRangePixels(2);
+    uniC = (uniC-grayScaleRangePixels(1));
+    uniC = 1-(uniC ./ sum(grayScaleRangePixels));
+    if xx==1
+        grayAtZeroPixels = mean(mean(uniC(:,1:zeroIdx)));
     end
 
     for ss=1:17
@@ -307,4 +341,5 @@ for xx = 1:3
     axis equal
     title(titleStr);
 end
+saveas(gcf,fullfile(plotSaveDir,'blinkAndFitAllSubjects.png'));
 
