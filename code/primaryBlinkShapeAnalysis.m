@@ -29,9 +29,6 @@
 close all
 clear
 
-% Flag to control if the ICA is intialized with a derivative set
-initializeICA = false;
-
 % List of subject IDs
 subjectIDs = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...
     14590, 14589, 14588, 14587, 14586, 15513, 15514};
@@ -42,9 +39,9 @@ targetPSISet = [3.5,7.5,15,30,60];
 nPSIs = length(targetPSISet);
 
 % A log-transformed version of the PSI values to use for fitting later
-    xVals = log10(targetPSISet);
-    xValMid = xVals(3);
-    xVals = xVals - xValMid;
+xVals = log10(targetPSISet);
+xValMid = xVals(3);
+xVals = xVals - xValMid;
 
 % The number of time-points
 nTimePoints = 161;
@@ -65,7 +62,7 @@ for ss=1:nSubs
     end
 end
 
-% Call the function once more to grab a temporal support
+% Call the function once more to grab the temporal support
 [~,temporalSupport]=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), 2);
 
 % Reshape into a matrix
@@ -87,27 +84,8 @@ X2_ICA = X2_ICA(goodIdx,:);
 rng default % For reproducibility
 q = 4; % four dimensions
 
-% Create some initial weights which are smoothed derivatives of the average
-% blink response
-if initializeICA
-initialWeights = zeros(nTimePoints,q);
-initialWeights(:,1)=mean(X_ICA);
-options = fitoptions('Method','Smooth','SmoothingParam',0.2);
-for ii=2:q
-    fitObj = fit([1:nTimePoints]',initialWeights(:,ii-1),'smooth',options);
-    initialWeights(:,ii) = differentiate(fitObj, 1:1:nTimePoints);
-end
-initialWeights=initialWeights-mean(initialWeights);
-initialWeights=initialWeights./vecnorm(initialWeights);
-
 % ICA time
-Mdl = rica(X_ICA,q,'InitialTransformWeights',initialWeights);
-
-else
-
-    Mdl = rica(X_ICA,q);
-
-end
+Mdl = rica(X_ICA,q);
 
 % Derive the coefficients
 X_ICAcoeff = Mdl.transform(X_ICA);
@@ -116,15 +94,6 @@ X2_ICAcoeff = Mdl.transform(X2_ICA);
 
 % Extract the components
 components = Mdl.TransformWeights;
-
-% Flip some signs if we used the initialize weights, which has an effect
-% upon the (arbitrary) signs of the ICA components
-if initializeICA
-    X_ICAcoeff(:,4) = -X_ICAcoeff(:,4);
-    X1_ICAcoeff(:,4) = -X1_ICAcoeff(:,4);
-    X2_ICAcoeff(:,4) = -X2_ICAcoeff(:,4);
-    components(:,4) = -components(:,4);
-end
 
 % Generate the fit
 X_ICAfit = components*X_ICAcoeff';
@@ -160,10 +129,12 @@ psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
 
 % Average blink response by puff pressure
 figure
-tmp = squeeze(mean(X,1));
+tmpX = squeeze(mean(X,1));
+tmpXfit = squeeze(mean(Xfit,1));
 for pp = 1:nPSIs
-    plot(temporalSupport,tmp(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
+    plot(temporalSupport,tmpX(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
     hold on
+    plot(temporalSupport,tmpXfit(pp,:),':','Color',psiColors(pp,:),'LineWidth',1.5)
 end
 xlabel('time [msecs]');
 ylabel('blink depth [pixels]');
@@ -180,7 +151,7 @@ for cc = plotOrder
 end
 legend(componentNames(plotOrder))
 xlabel('time [msecs]');
-ylabel('componnt value [a.u.]');
+ylabel('component value [a.u.]');
 
 % Plot of the coefficients by puff pressure
 figure
@@ -204,6 +175,7 @@ for cc=1:4
     end
 end
 
+
 % Calculate the correlation of the fit with each average blink response
 for ss=1:nSubs
     for pp=1:5
@@ -212,21 +184,87 @@ for ss=1:nSubs
 end
 
 % Show scatter plots of test / retest of overall amplitude and speed
+limVals = {...
+    [0 700],[-100 300];...
+    [0 1000],[-150 150]};
+symbolColors={'k','b'};
+nameRow = {'slope','offset'};
+nameColumn = {'amplitude','rapidity'};
 figure
-subplot(2,2,1);
-plot(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2),'ok'); xlim([0 1000]); ylim([0 1000]); axis square
-refline(1,0);
-title(sprintf('amplitude offset, r=%2.2f',corr(ampPuffCoeff1(:,2),ampPuffCoeff2(:,2))));
-subplot(2,2,2);
-plot(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2),'ob'); xlim([-150 150]); ylim([-150 150]); axis square
-refline(1,0);
-title(sprintf('speed offset, r=%2.2f',corr(speedPuffCoeff1(:,2),speedPuffCoeff2(:,2))));
-subplot(2,2,3);
-plot(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1),'ok'); xlim([0 700]); ylim([0 700]);axis square
-refline(1,0);
-title(sprintf('amplitude slope, r=%2.2f',corr(ampPuffCoeff1(:,1),ampPuffCoeff2(:,1))));
-subplot(2,2,4);
-plot(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1),'ob'); xlim([-100 300]); ylim([-100 300]);axis square
-refline(1,0);
-title(sprintf('speed slope, r=%2.2f',corr(speedPuffCoeff1(:,1),speedPuffCoeff2(:,1))));
+for cc=1:2
+    for rr=1:2
+        subplot(2,2,(2-rr)*2+cc);
+        if cc==1
+            vals1 = ampPuffCoeff1(:,rr);
+            vals2 = ampPuffCoeff2(:,rr);
+        else
+            vals1 = speedPuffCoeff1(:,rr);
+            vals2 = speedPuffCoeff2(:,rr);
+        end
+        scatter(vals1,vals2,'MarkerFaceColor',symbolColors{cc},'MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
+        xlim(limVals{rr,cc}); ylim(limVals{rr,cc});
+        axis square; box off
+        refline(1,0);
+        titleStr = sprintf([nameColumn{cc} ' ' nameRow{rr} ' r=%2.2f'],corr(vals1,vals2));
+        title(titleStr);
+    end
+end
+
+
+%% Illustration of all blink responses and ICA model fit
+figure
+nPSIs = 5;
+betweenSubGap = 3;
+[~,zeroIdx]=min(abs(temporalSupport));
+
+% Loop over the three display panels
+for xx = 1:3
+    switch xx
+        case 1
+            % Create uniC, which is permuted to order rows by subject then puff
+            uniC = reshape(permute(X,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            titleStr = 'average blinks';
+            C = ones(85+(betweenSubGap*16),161+10,3);
+        case 2
+            uniC = reshape(permute(Xfit,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            titleStr = 'model fit';
+            C = ones(85+(betweenSubGap*16),161+10,3);
+        case 3
+            uniC = reshape(permute(X-Xfit,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            titleStr = 'residuals';
+            C = ones(85+(betweenSubGap*16),161+10,3);
+    end
+
+    % Map uniC to the 0-1 range. We store the scaling factors to use them
+    % for all three matrix displays.
+    if xx == 1
+        minX = min(uniC(:));
+        uniC = uniC-minX;
+        maxAbsX = max(abs(uniC(:)));
+        uniC = uniC ./ maxAbsX;
+    else
+        uniC = uniC-minX;
+        uniC = uniC ./ maxAbsX;
+    end
+
+    for ss=1:17
+        XrowStart = (ss-1)*nPSIs+1;
+        CrowStart = (ss-1)*(nPSIs+betweenSubGap)+1;
+
+        % Place the blink vectors into the matrix
+        C(CrowStart:CrowStart+nPSIs-1,11:end,:) = repmat(uniC(XrowStart:XrowStart+4,:),1,1,3);
+
+        % Add a color bar
+        C(CrowStart:CrowStart+nPSIs-1,1:10,:) = permute(repmat(psiColors,1,1,10),[1 3 2]);
+
+        % Add a marker for stimulus onset
+        C(CrowStart:CrowStart+nPSIs-1,10+zeroIdx,:) = repmat([0 0 1],nPSIs,1);
+
+    end
+
+    subplot(1,3,xx);
+    image(imresize(C,[size(C,1)*4,size(C,2)],"nearest")); axis off
+    axis equal
+    title(titleStr);
+end
 
