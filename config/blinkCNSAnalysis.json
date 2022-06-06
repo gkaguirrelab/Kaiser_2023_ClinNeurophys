@@ -3,7 +3,7 @@
 	"flavor": "",
 	"hook": "",
 	"importance": "",
-	"localHookTemplate": "",
+	"localHookTemplate": "config/blinkCNSAnalysisLocalHookTemplate.m",
 	"printLocalHookOutput": "1",
 	"name": "blinkCNSAnalysis",
 	"pathPlacement": "append",
