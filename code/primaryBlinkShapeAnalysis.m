@@ -46,6 +46,9 @@ xVals = xVals - xValMid;
 % The number of time-points
 nTimePoints = 161;
 
+% Number of blinks per acquisition
+nBlinksPerAcq = 8;
+
 % Load the time-series data
 X = zeros(nSubs,nPSIs,nTimePoints);
 X1 = zeros(nSubs,nPSIs,nTimePoints);
@@ -122,10 +125,47 @@ for ii=1:nSubs
     speedPuffCoeff2(ii,:)=polyfit(xVals(2:end),X2coeff(ii,2:end,4),1);
 end
 
-%% Create some plots
+
+%%%%%%%%%%%%%%%%%%%%%
+%% FIGURES
+%%%%%%%%%%%%%%%%%%%%%
 
 % Define a gray-to-red color set for puff-pressure
 psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
+
+
+%% Acquisition order and example raw set of blinks
+psiAcqOrder = [4 4 1 3 5 5 3 1 2 4 2 2 1 5 4 3 3 4 5 2 3 2 5 1 1 4];
+figure
+set(gcf, 'Position',  [100, 100, 560, 200])
+subplot(2,1,1)
+plotIdx = 1;
+dash = 10;
+dot = 2;
+for aa=1:length(psiAcqOrder)
+  plot( plotIdx:plotIdx+dash-1, repmat(psiAcqOrder(aa),dash,1), '-', 'Color', psiColors(psiAcqOrder(aa),:),'LineWidth',2)
+  if aa==1; hold on; end
+  plotIdx = plotIdx+dash+dot;
+end
+xlim([1 plotIdx])
+axis off
+
+subplot(2,1,2)
+subjectID = 14591;
+[~,temporalSupport,nTrials,blinkVectorRaw] = returnBlinkTimeSeries( 14591, [], 1 );
+spacing = 10;
+plotIdx = (nTimePoints)*nBlinksPerAcq;
+blinkIdx = 1;
+for aa=2:length(psiAcqOrder)
+    for bb = 1:nBlinksPerAcq
+        plot( plotIdx:plotIdx+nTimePoints-1, blinkVectorRaw(blinkIdx,:), '-', 'Color', psiColors(psiAcqOrder(aa),:))
+        if aa==2 && bb==1; hold on; end
+        plotIdx = plotIdx + nTimePoints;
+        blinkIdx = blinkIdx+1;
+    end
+end
+xlim([1 plotIdx])
+axis off
 
 % Average blink response by puff pressure
 figure

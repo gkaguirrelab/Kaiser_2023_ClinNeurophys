@@ -12,35 +12,36 @@ function [blinkVector,temporalSupport, nTrials, blinkVectorRaw] = returnBlinkTim
 %                           subject.
 %   targetPSI             - Scalar. One of the valid PSI targets:
 %                               {3.5, 7.5, 15, 30, 60}
+%                           If set empty, all PSI levels are used
+%   sessionID             - Scalar. Valid values are:
+%                               {1, 2}
+%                           If set empty, both sessions are used
 %
 % Outputs:
 %   blinkVector           - Vector
 %   temporalSupport       - Vector
+%   nTrials               - Scalar
+%   blinkVectorRaw        - nTrials x time matrix of raw responses
 %
 % Examples:
 %{
-    targetPSISet = [3.5, 7.5, 15, 30, 60];
+    targetPSI = 7.5;
     subjectID = 15513;
+    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subjectID, targetPSI );
     figure
-    for ii=1:length(targetPSISet)
-        lineColor = [0.75 0.75 0.75] - ii.*[0.15 0.15 0.15];
-        [blinkVector,temporalSupport] = returnBlinkTimeSeries( subjectID, targetPSISet(ii) );
-        plot(temporalSupport,blinkVector,'-','Color',lineColor)
-        hold on
-    end
+    plot(temporalSupport,blinkVector,'-r')
 %}
 %{
-    subjectID = 14595;
+    subjectID = 15513;
+    [~,temporalSupport,nTrials,blinkVectorRaw] = returnBlinkTimeSeries( subjectID );
     figure
-    plot(returnBlinkTimeSeries( subjectID, 15, 1));
-    hold on
-    plot(returnBlinkTimeSeries( subjectID, 15, 2));
+    plot(temporalSupport,blinkVector,'-r')
 %}
 
 
 arguments
     subjectID (1,1) {mustBeNumeric}
-    targetPSI (1,1) {mustBeNumeric}
+    targetPSI = [];
     sessionID = [];
     minValidIpsiBlinksPerAcq (1,1) {mustBeNumeric} = 0;
     minValidAcq = 0;
@@ -77,14 +78,17 @@ scanTable = T(ismember(T.subjectID,subjectID),:);
 % Store the scan dates
 scanDates = unique(scanTable.scanDate);
 
-% Now cull the table to remove invalid scans and those that don't match to
-% target PSI
+% Now cull the table to remove invalid scans
 scanTable = scanTable(ismember(scanTable.notSquint,'TRUE'),:);
 scanTable = scanTable(scanTable.numIpsi>=minValidIpsiBlinksPerAcq,:);
+
+% If we have a targetPSI, filter the table to include just those
+if ~isempty(targetPSI)
 scanTable = scanTable(scanTable.intendedPSI==targetPSI,:);
+end
 
 % Filter out "invalid" blinks (per BlinkCNS processing) if the setting
-% minValidIpsiBlinksPerAcqis greater than zero
+% minValidIpsiBlinksPerAcq is greater than zero
 if minValidIpsiBlinksPerAcq > 0
     scanTable = scanTable(ismember(scanTable.valid,'TRUE'),:);
 end
@@ -184,7 +188,7 @@ for ii = 1:size(scanTable,1)
     respByAcq(ii,:) = posAvg;
 
     % Create a concatenated, raw vector of responses
-    blinkVectorRaw = [blinkVectorRaw, reshape(pos',1,numel(pos))-posAvgPreStim];
+    blinkVectorRaw = [blinkVectorRaw; pos-posAvgPreStim];
 
 end
 
