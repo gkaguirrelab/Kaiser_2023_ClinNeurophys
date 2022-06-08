@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials, blinkVectorRaw] = returnBlinkTimeSeries( subjectID, targetPSI, sessionID, minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID, targetPSI, sessionID, minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -31,12 +31,6 @@ function [blinkVector,temporalSupport, nTrials, blinkVectorRaw] = returnBlinkTim
     figure
     plot(temporalSupport,blinkVector,'-r')
 %}
-%{
-    subjectID = 15513;
-    [~,temporalSupport,nTrials,blinkVectorRaw] = returnBlinkTimeSeries( subjectID );
-    figure
-    plot(temporalSupport,blinkVector,'-r')
-%}
 
 
 arguments
@@ -52,8 +46,9 @@ end
 % Set a counter to return
 nTrials = 0;
 
-% Initialize a vector for return
+% Initialize vectors for return
 blinkVectorRaw = [];
+trialIndices = [];
 
 % Define the location of the i-files
 dataDirPath = fileparts(fileparts(mfilename('fullpath')));
@@ -173,6 +168,9 @@ for ii = 1:size(scanTable,1)
 
         % Add it to the matrix
         pos(jj,offset:end) = temp';
+
+        % Store the trial index
+        trialIndices = [trialIndices jj];
 
         % Increment the trial count
         nTrials = nTrials + 1;
