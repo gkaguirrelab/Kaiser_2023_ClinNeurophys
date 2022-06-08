@@ -413,23 +413,6 @@ for xx = 1:3
 end
 
 
-%% Evoked responses from subjects with high and low sensitivity
-
-figure
-subIdxToPlot = [14,12,3,1];
-for ss = 1:length(subIdxToPlot)
-    subplot(1,length(subIdxToPlot),ss)
-    for pp=1:nPSIs
-        plot(temporalSupport, returnBlinkTimeSeries( subjectIDs{subIdxToPlot(ss)}, targetPSISet(pp) ), '-', 'Color', psiColors(pp,:),'LineWidth',0.5);
-        if pp==1;hold on; end
-    end
-    axis off
-    ylim([-175 20])
-    plot([-100 -100],[0 -100],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
-    title(sprintf('slopes [%2.0f,%2.0f]',ampPuffCoeff(subIdxToPlot(ss),1),speedPuffCoeff(subIdxToPlot(ss),1)))
-end
-
-
 %% Supplementary figure: Reconstruction error with fewer components
 
 % Calculate the variance explained as a function of dimensionality
