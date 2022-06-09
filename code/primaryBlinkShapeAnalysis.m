@@ -219,6 +219,10 @@ for pp = 1:nPSIs
     hold on
     plot(temporalSupport,tmpXfit(pp,:),'--','Color',psiColors(pp,:),'LineWidth',1.5)
 end
+    plot([0 0],[-125 25],'-b')
+        plot([-100 -100],[0 -100],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
+        plot([-100 0],[-125 -125],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
+        axis off
 xlabel('time [msecs]');
 ylabel('blink depth [pixels]');
 saveas(gcf,fullfile(plotSaveDir,'averageBlnkResponseByPSI.pdf'));
@@ -286,10 +290,10 @@ limVals = {...
     [0 700],[-100 300];...
     [0 1000],[-150 150]};
 subIdxToShow = {[8,13],[16,9]}; % [14, 13]
-symbolColors={'g','g'};
 nameRow = {'slope','offset'};
 axisLabels = {'amplitude','velocity'};
 figure
+subjectLineStyle = {'-',':'};
 
 for rr=1:2
     subplot(2,3,(2-rr)*3+1);
@@ -304,7 +308,9 @@ for rr=1:2
     title(titleStr);
     hold on
     for ss=1:length(subIdxToShow{rr})
-        scatter(vals1(subIdxToShow{rr}(ss)),vals2(subIdxToShow{rr}(ss)),200,'r','MarkerFaceColor','none');
+        dims = [range(xlim)/10, range(ylim)/10];
+        pos = [vals1(subIdxToShow{rr}(ss))-dims(1)/2,vals2(subIdxToShow{rr}(ss))-dims(2)/2,dims(1),dims(2)];
+        rectangle('Position',pos,'Curvature',[1,1],'LineStyle',subjectLineStyle{ss},'EdgeColor','r')
     end
     if rr==2
         pressureToPlotIdx = [0 0 1 0 0];
@@ -315,7 +321,7 @@ for rr=1:2
         subplot(2,3,(2-rr)*3+1+ss);
         for pp=1:length(pressureToPlotIdx)
             if pressureToPlotIdx(pp)==1
-                plot(temporalSupport, returnBlinkTimeSeries( subjectIDs{subIdxToShow{rr}(ss)}, targetPSISet(pp) ), '-', 'Color', psiColors(pp,:),'LineWidth',1);
+                plot(temporalSupport, returnBlinkTimeSeries( subjectIDs{subIdxToShow{rr}(ss)}, targetPSISet(pp) ), subjectLineStyle{ss}, 'Color', psiColors(pp,:),'LineWidth',1);
                 hold on
             end
         end
@@ -331,11 +337,11 @@ saveas(gcf,fullfile(plotSaveDir,'subjectCoeffDistribution.pdf'));
 
 %% Show scatter plots of test / retest of overall amplitude and speed
 limVals = {...
-    [0 700],[-100 300];...
-    [0 1000],[-150 150]};
+    [0 800],[-100 300];...
+    [0 1000],[-200 200]};
 symbolColors={'k','b'};
 nameRow = {'slope','offset'};
-nameColumn = {'amplitude','rapidity'};
+nameColumn = {'amplitude','velocity'};
 figure
 for cc=1:2
     for rr=1:2
@@ -349,10 +355,13 @@ for cc=1:2
         end
         scatter(vals1,vals2,'MarkerFaceColor',symbolColors{cc},'MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
         xlim(limVals{rr,cc}); ylim(limVals{rr,cc});
-        axis square; box off
-        refline(1,0);
         titleStr = sprintf([nameColumn{cc} ' ' nameRow{rr} ' r=%2.2f'],corr(vals1,vals2));
         title(titleStr);
+        axis square; box off
+        a=gca;
+        a.YTick = a.XTick;
+        a.YTickLabel = a.XTickLabel;
+        refline(1,0);
     end
 end
 saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
@@ -408,8 +417,7 @@ for xx = 1:3
 
     image(imresize(C,[size(C,1)*4,size(C,2)],"nearest")); axis off
     axis equal
-    title(titleStr);
-    saveas(gcf,fullfile(plotSaveDir,sprintf('blinkAndFitAllSubjects_%d.png',xx)));
+    exportgraphics(gca,fullfile(plotSaveDir,sprintf('blinkAndFitAllSubjects_%d.png',xx)));
 end
 
 
