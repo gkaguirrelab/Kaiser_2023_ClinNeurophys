@@ -341,7 +341,7 @@ limVals = {...
     [0 1000],[-200 200]};
 symbolColors={'k','b'};
 nameRow = {'slope','offset'};
-nameColumn = {'amplitude','velocity'};
+axisLabels = {'amplitude','velocity'};
 figure
 for cc=1:2
     for rr=1:2
@@ -355,9 +355,11 @@ for cc=1:2
         end
         scatter(vals1,vals2,'MarkerFaceColor',symbolColors{cc},'MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
         xlim(limVals{rr,cc}); ylim(limVals{rr,cc});
-        titleStr = sprintf([nameColumn{cc} ' ' nameRow{rr} ' r=%2.2f'],corr(vals1,vals2));
+        titleStr = sprintf([axisLabels{cc} ' ' nameRow{rr} ' r=%2.2f'],corr(vals1,vals2));
         title(titleStr);
         axis square; box off
+        xlabel([axisLabels{cc} ' ' nameRow{rr} ' [a.u.]']);
+        ylabel([axisLabels{cc} ' ' nameRow{rr} ' [a.u.]']);
         a=gca;
         a.YTick = a.XTick;
         a.YTickLabel = a.XTickLabel;
