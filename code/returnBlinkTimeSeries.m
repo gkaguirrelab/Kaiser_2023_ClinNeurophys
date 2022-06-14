@@ -79,7 +79,7 @@ scanTable = scanTable(scanTable.numIpsi>=minValidIpsiBlinksPerAcq,:);
 
 % If we have a targetPSI, filter the table to include just those
 if ~isempty(targetPSI)
-scanTable = scanTable(scanTable.intendedPSI==targetPSI,:);
+    scanTable = scanTable(scanTable.intendedPSI==targetPSI,:);
 end
 
 % Filter out "invalid" blinks (per BlinkCNS processing) if the setting
@@ -148,6 +148,11 @@ for ii = 1:size(scanTable,1)
     starts = all - nSamplesBeforeStim;
     ends = all + nSamplesAfterStim;
 
+    % Issue a warning if there are fewer than 8 trials
+    if length(starts)<8
+        fprintf(['Only %d trials: ' fullfile(num2str(subjectID),iFileName) '\n'],length(starts));
+    end
+
     % get means across trials
     pos = nan(length(starts),nSamplesBeforeStim+nSamplesAfterStim+1);
     for jj = 1:length(starts)
@@ -176,7 +181,7 @@ for ii = 1:size(scanTable,1)
         nTrials = nTrials + 1;
 
     end
-    
+
     % center pre-stimulus around zero
     posAvg = nanmean(pos);
     posAvgPreStim = mean(posAvg(1:nSamplesBeforeStim));
