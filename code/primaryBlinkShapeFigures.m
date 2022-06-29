@@ -4,6 +4,8 @@
 % Define a gray-to-red color set for puff-pressure
 psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
 
+% Define a blue-to-gray color set for trial number
+trialColors = [0:(0.5/7):0.5; 0:(0.5/7):0.5; 1.0:-(0.5/7):0.5]';
 
 %% Acquisition order and example raw set of blinks
 psiAcqOrder = [4 4 1 3 5 5 3 1 2 4 2 2 1 5 4 3 3 4 5 2 3 2 5 1 1 4];
@@ -135,6 +137,39 @@ end
 saveas(gcf,fullfile(plotSaveDir,'coefficientsByPSI.pdf'));
 
 
+
+
+%% Plot of the coefficients by trial number
+figure
+meanCoeff = squeeze(mean(trialXcoeff,1));
+semCoeff = squeeze(std(trialXcoeff,1))./sqrt(nSubs);
+plotOrder = [1 3 4 2];
+for cc=1:4
+    subplot(2,2,plotOrder(cc))
+    for pp = 1:8
+        plot([pp pp],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
+        hold on
+        plot(pp,meanCoeff(pp,cc),'o',...
+            'MarkerFaceColor',componentColors(cc,:),'MarkerEdgeColor','none' );
+    end
+    xticks(1:8);
+    xlabel('trial number')
+    title(componentNames{cc})
+    box off
+end
+saveas(gcf,fullfile(plotSaveDir,'coefficientsByTrialNumber.pdf'));
+
+
+%% Plot of the mean response by trial number
+figure
+meanResponseByTrial=squeeze(mean(trialX));
+for ii=1:8
+    plot(temporalSupport,meanResponseByTrial(ii,:),'-','Color',trialColors(ii,:),'LineWidth',2);
+    hold on
+end
+saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
+
+
 %% Calculate the correlation of the fit with each average blink response
 for ss=1:nSubs
     for pp=1:5
@@ -225,6 +260,17 @@ for cc=1:2
     end
 end
 saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
+
+% Report the test / re-test correlation of the mean (across PSI) shape
+% parameters across subjects
+% Calculate the mean of the shape coefficients across pressure levels
+shape1coeffsSess1 = mean(X1coeff(:,:,2),2);
+shape1coeffsSess2 = mean(X2coeff(:,:,2),2);
+shape2coeffsSess1 = mean(X1coeff(:,:,3),2);
+shape2coeffsSess2 = mean(X2coeff(:,:,3),2);
+fprintf('Correlation of mean (across PSI) shape 1 coeff between sess 1 and 2: r = %2.2f \n',corr(shape1coeffsSess1,shape1coeffsSess2));
+fprintf('Correlation of mean (across PSI) shape 2 coeff between sess 1 and 2: r = %2.2f \n',corr(shape2coeffsSess1,shape2coeffsSess2));
+foo=1;
 
 
 %% Illustration of all blink responses and ICA model fit
