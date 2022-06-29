@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID, targetPSI, sessionID, minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -27,7 +27,7 @@ function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = 
 %{
     targetPSI = 7.5;
     subjectID = 15513;
-    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subjectID, targetPSI );
+    [blinkVector,temporalSupport] = returnBlinkTimeSeries( subjectID, targetPSI, 1, 'ipsi' );
     figure
     plot(temporalSupport,blinkVector,'-r')
 %}
@@ -37,6 +37,7 @@ arguments
     subjectID (1,1) {mustBeNumeric}
     targetPSI = [];
     sessionID = [];
+    ipsiOrContra = 'ipsi';
     minValidIpsiBlinksPerAcq (1,1) {mustBeNumeric} = 0;
     minValidAcq = 0;
     nSamplesBeforeStim = 10;
@@ -161,11 +162,22 @@ for ii = 1:size(scanTable,1)
         % desired "numBefore" window
         offset = max([1 -starts(jj)+2]);
 
-        % Handle the laterality of the stimulus and
+        % Handle the laterality of the stimulus and the choice of returning
+        % the ipsi or contra response
         if ismember(all(jj),rights)
-            columnIdx = 3;
+            switch ipsiOrContra
+                case 'ipsi'
+                    columnIdx = 3;
+                case 'contra'
+                    columnIdx = 4;
+            end
         else
-            columnIdx = 4;
+            switch ipsiOrContra
+                case 'ipsi'
+                    columnIdx = 4;
+                case 'contra'
+                    columnIdx = 3;
+            end
         end
 
         % Get this timeseries
@@ -191,7 +203,7 @@ for ii = 1:size(scanTable,1)
     respByAcq(ii,:) = posAvg;
 
     % Create a concatenated, raw vector of responses
-    blinkVectorRaw = [blinkVectorRaw; pos-posAvgPreStim];
+    blinkVectorRaw = [blinkVectorRaw; pos-mean(pos(:,1:nSamplesBeforeStim),2)];
 
 end
 
