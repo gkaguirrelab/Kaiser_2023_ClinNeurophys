@@ -141,5 +141,58 @@ for ii=1:nSubs
     speedPuffCoeff2(ii,:)=polyfit(xVals(2:end),X2coeff(ii,2:end,4),1);
 end
 
+% Fit a weibullCDF to the amplitude data
 
+% Define an increasing weibull CDF with 4 parameters. Assume that there is
+% a zero amplitude response at some zero stimulus.
+figure
+xShift = log10(0.01);
+x = log10(targetPSISet)-xShift;
+deltaX = x(2)-x(1);
+xFit = linspace(xShift,log10(100))-xShift;
+deltaXFit = xFit(2)-xFit(1);
+lb = [0 0 0 0];
+ub = [0 nan 5 12];
+weibullCDF = @(x,p) p(1) + p(2) - p(2)*exp( - (x./p(3)).^p(4) ) ;
+options = optimoptions('fmincon','Display','off');
+for ii=1:nSubs
+    y=Xcoeff(ii,:,1);
+    % Determine the max amplitude from y
+    if y(nPSIs)<y(nPSIs-1)
+        maxY(ii) = mean(y(nPSIs-1:nPSIs));
+    else
+        maxY(ii) = y(nPSIs);
+    end
+    ub(2) = maxY(ii);
+    myObj = @(p) norm(y-weibullCDF(x,p));
+    p(ii,:) = fmincon(myObj,[0 1000 1 1],[],[],[],[],lb,ub,[],options);
+    yFit = weibullCDF(xFit,p(ii,:))./p(ii,2);
+    subplot(2,9,ii);
+    plot(x+xShift,y./p(ii,2),'ok'); hold on; plot(xFit+xShift,yFit,'-r');
+    [~,idx] = min(abs(yFit-0.5));
+    plot([xFit(idx)+xShift xFit(idx)+xShift],[0 0.5],'-m');
+    plot([xShift xFit(idx)+xShift],[0.5 0.5],'-m');
+    x50(ii) = 10^(xFit(idx)+xShift);
+    xlim([-1.1 2.1]);
+    ylim([-0.1 1.1]);
+    axHandle = gca;
+    axHandle.XTickLabel = cellstr(string([0.1 1 10 100]));
+end
 
+% Repeat now and obtain the coefficients from the first and second session
+for ii=1:nSubs
+    for ss = 1:2
+        switch ss
+            case 1
+                y=X1coeff(ii,:,1);
+            case 2
+                y=X2coeff(ii,:,1);
+        end
+    ub(2) = maxY(ii);
+    myObj = @(p) norm(y-weibullCDF(x,p));
+    pSess(ss,ii,:) = fmincon(myObj,[0 1000 1 1],[],[],[],[],lb,ub,[],options);
+    yFit = weibullCDF(xFit,p(ii,:))./p(ii,2);
+    [~,idx] = min(abs(yFit-0.5));
+    x50Sess(ss,ii) = 10^(xFit(idx)+xShift);
+    end
+end
