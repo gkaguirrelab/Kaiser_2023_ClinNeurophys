@@ -90,7 +90,7 @@ if minValidIpsiBlinksPerAcq > 0
 end
 
 % Handle working with session 1, 2, or both
-if nargin>2 && ~isempty(scanTable)
+if ~isempty(sessionID) && ~isempty(scanTable)
     dateMatchIdx = scanTable.scanDate == scanDates(sessionID);
     scanTable = scanTable(dateMatchIdx,:);
 end
