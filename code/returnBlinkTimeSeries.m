@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,discardFirstTrialFlag,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -38,6 +38,7 @@ arguments
     targetPSI = [];
     sessionID = [];
     ipsiOrContra = 'ipsi';
+    discardFirstTrialFlag = false;
     minValidIpsiBlinksPerAcq (1,1) {mustBeNumeric} = 0;
     minValidAcq = 0;
     nSamplesBeforeStim = 10;
@@ -156,6 +157,7 @@ for ii = 1:size(scanTable,1)
 
     % get means across trials
     pos = nan(length(starts),nSamplesBeforeStim+nSamplesAfterStim+1);
+
     for jj = 1:length(starts)
 
         % Handle the edge case of the time-series starting after the
@@ -192,6 +194,11 @@ for ii = 1:size(scanTable,1)
         % Increment the trial count
         nTrials = nTrials + 1;
 
+    end
+
+    % Discard the first trial if requested
+    if discardFirstTrialFlag
+        pos = pos(2:end,:);
     end
 
     % center pre-stimulus around zero

@@ -29,6 +29,10 @@
 close all
 clear
 
+% Some analysis settings
+ipsiOrContra = 'ipsi';
+discardFirstTrialFlag = true;
+
 % Get the location to save plots
 plotSaveDir = getpref('blinkCNSAnalysis','plotSaveDir');
 
@@ -52,27 +56,46 @@ nTimePoints = 161;
 % Number of blinks per acquisition
 nBlinksPerAcq = 8;
 
-% Load the time-series data
+% Number of session
+nSessions = 2;
+
+% Define variables to hold the time-series dat
 X = zeros(nSubs,nPSIs,nTimePoints);
-X1 = zeros(nSubs,nPSIs,nTimePoints);
-X2 = zeros(nSubs,nPSIs,nTimePoints);
+XSess = zeros(nSessions,nSubs,nPSIs,nTimePoints);
 nTrials = zeros(nSubs,5);
 
+% Loop through the subjects and identify the largest excursion seen for
+% each of the sessions. This may happen in the 30 or 60 PSI stimulus
+for ss=1:nSubs
+    for tt=1:nSessions
+    maxExcursion(ss,tt) = -min([...
+        min(returnBlinkTimeSeries( subjectIDs{ss}, 30, tt, ipsiOrContra, discardFirstTrialFlag )),...
+        min(returnBlinkTimeSeries( subjectIDs{ss}, 60, tt, ipsiOrContra, discardFirstTrialFlag )),...
+        ]);
+    end
+end
+
 % Loop through subjects and pressure levels. Load the full and by-session
-% data separately for ease of coding below
+% data separately. As each time-series is loaded, scale it by the max
+% excursion so that the response is in units of proportion of maximal blink
 for ss=1:nSubs
     for pp=1:nPSIs
-        [X(ss,pp,:),~,nTrials(ss,pp)]=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp),[],'ipsi');
-        X1(ss,pp,:)=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), 1);
-        X2(ss,pp,:)=returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), 2);
+        for tt=1:nSessions
+            XSess(tt,ss,pp,:) = returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), tt, ipsiOrContra, discardFirstTrialFlag) ./ maxExcursion(ss,tt);
+        end
+        X(ss,pp,:) = (XSess(1,ss,pp,:)+XSess(2,ss,pp,:))./2;
     end
 
     % Get the raw vector and obtain the blinks averaged by trial index for
-    % the analysis of habituation effects
-    [~,~,~,blinkVectorRaw,trialIndices] = returnBlinkTimeSeries( subjectIDs{ss} );
-    for tt=1:nBlinksPerAcq
-        trialX(ss,tt,:) = nanmean(blinkVectorRaw(trialIndices==tt,:));
+    % the analysis of habituation effects. Do not discard the first trial.
+    trialBySess = [];
+    for tt=1:nSessions
+        [~,~,~,blinkVectorRaw,trialIndices] = returnBlinkTimeSeries( subjectIDs{ss}, [], tt, ipsiOrContra, false );
+        for aa=1:nBlinksPerAcq
+            trialBySess(tt,aa,:) = nanmean(blinkVectorRaw(trialIndices==aa,:)) ./ maxExcursion(ss,tt);
+        end
     end
+    trialX(ss,:,:) = squeeze(mean(trialBySess));
 
 end
 
@@ -81,118 +104,76 @@ end
 [~,zeroIdx]=min(abs(temporalSupport));
 
 % Reshape into a matrix
-X_ICA = reshape(X,nSubs*nPSIs,nTimePoints);
-X1_ICA = reshape(X1,nSubs*nPSIs,nTimePoints);
-X2_ICA = reshape(X2,nSubs*nPSIs,nTimePoints);
-trialX_ICA = reshape(trialX,nSubs*nBlinksPerAcq,nTimePoints);
-
-% Remove any "bad" blink averages that are all nans
-goodIdx = ~any(isnan(X_ICA'));
-X_ICA = X_ICA(goodIdx,:);
-X1_ICA = X1_ICA(goodIdx,:);
-X2_ICA = X2_ICA(goodIdx,:);
+X_mat = reshape(X,nSubs*nPSIs,nTimePoints);
+XSess_mat = reshape(XSess,2,nSubs*nPSIs,nTimePoints);
+trialX_mat = reshape(trialX,nSubs*nBlinksPerAcq,nTimePoints);
 
 
-%% Conduct the ICA
-% After some trial-and-error, I find that 4 dimensions fits the data
-% very well, and supports the creation of independent "amplitude" and
-% "timing" components.
-rng default % For reproducibility
-q = 4; % four dimensions
+%% Create a regression matrix
 
-% ICA time
-Mdl = rica(X_ICA,q);
+% We will have three covariates
+q=3;
 
-% Derive the coefficients
-X_ICAcoeff = Mdl.transform(X_ICA);
-X1_ICAcoeff = Mdl.transform(X1_ICA);
-X2_ICAcoeff = Mdl.transform(X2_ICA);
-trialX_ICAcoeff = Mdl.transform(trialX_ICA);
+% This is the average response and its first derivative
+components = [];
+components(:,1)=mean(X_mat);
+components(:,2)=[0 diff(mean(X_mat))];
 
-% Extract the components
-components = Mdl.TransformWeights;
+% mean center
+components = components - mean(components);
 
-% Generate the fit
-X_ICAfit = components*X_ICAcoeff';
+% Obtain the residual of the X_mat matrix after removing these components.
+for ii=1:size(X_mat,1)
+    y = X_mat(ii,:);
+    offset = mean(y);
+    y = y - offset;
+    y = y - (regress(y',components)'*components');
+    y = y + offset;
+    X_resid(ii,:) = y;
+end
+
+% Conduct a PCA to find the most informative third component
+pcaCoeff = pca(X_resid);
+components = [components, pcaCoeff(:,1)];
+
+% Scale these to have unit excursion and mean center
+components = components - mean(components);
+components = components ./ range(components);
+
+% Conduct the regression and obtain the coefficients
+for ii=1:size(X_mat,1)
+    y = X_mat(ii,:);
+    offset = mean(y);
+    y = y - offset;
+    b = regress(y',components)';
+    X_matcoeff(ii,:) = b;
+    X_matfit(ii,:) = b*components' + offset;
+
+    % Get the coefficients by sesssion
+    for ss=1:nSessions
+        y = squeeze(XSess_mat(ss,ii,:))';
+        offset = mean(y);
+        y = y - offset;
+        b = regress(y',components)';
+        XSess_matcoeff(ss,ii,:) = b;
+    end
+end
+
+% Now do the regression across trials
+for ii=1:nSubs
+    for aa=1:nBlinksPerAcq
+        y = squeeze(trialX(ii,aa,:))';
+        offset = mean(y);
+        y = y - offset;
+        b = regress(y',components)';
+        trialX_coeff(ii,aa,:) = b;
+    end
+end
 
 % Reshape the results
-Xcoeff = nan(nSubs*nPSIs,q);
-Xcoeff(goodIdx,:)=X_ICAcoeff;
-Xcoeff = reshape(Xcoeff,nSubs,nPSIs,q);
-X1coeff = nan(nSubs*nPSIs,q);
-X1coeff(goodIdx,:)=X1_ICAcoeff;
-X1coeff = reshape(X1coeff,nSubs,nPSIs,q);
-X2coeff = nan(nSubs*nPSIs,q);
-X2coeff(goodIdx,:)=X2_ICAcoeff;
-X2coeff = reshape(X2coeff,nSubs,nPSIs,q);
-trialXcoeff = reshape(trialX_ICAcoeff,nSubs,nBlinksPerAcq,q);
+Xcoeff = reshape(X_matcoeff,nSubs,nPSIs,q);
+XSessCoeff = reshape(XSess_matcoeff,nSessions,nSubs,nPSIs,q);
+Xfit = reshape(X_matfit,nSubs,nPSIs,nTimePoints);
 
-Xfit = nan(nSubs*nPSIs,nTimePoints);
-Xfit(goodIdx,:) = X_ICAfit';
-Xfit = reshape(Xfit,nSubs,nPSIs,nTimePoints);
 
-% Fit a slope to the first and fourth component coefficients
-for ii=1:nSubs
-    ampPuffCoeff(ii,:)=polyfit(xVals,Xcoeff(ii,:,1),1);
-    ampPuffCoeff1(ii,:)=polyfit(xVals,X1coeff(ii,:,1),1);
-    ampPuffCoeff2(ii,:)=polyfit(xVals,X2coeff(ii,:,1),1);
-    speedPuffCoeff(ii,:)=polyfit(xVals(2:end),Xcoeff(ii,2:end,4),1);
-    speedPuffCoeff1(ii,:)=polyfit(xVals(2:end),X1coeff(ii,2:end,4),1);
-    speedPuffCoeff2(ii,:)=polyfit(xVals(2:end),X2coeff(ii,2:end,4),1);
-end
 
-% Fit a weibullCDF to the amplitude data
-
-% Define an increasing weibull CDF with 4 parameters. Assume that there is
-% a zero amplitude response at some zero stimulus.
-figure
-xShift = log10(0.01);
-x = log10(targetPSISet)-xShift;
-deltaX = x(2)-x(1);
-xFit = linspace(xShift,log10(100))-xShift;
-deltaXFit = xFit(2)-xFit(1);
-lb = [0 0 0 0];
-ub = [0 nan 5 12];
-weibullCDF = @(x,p) p(1) + p(2) - p(2)*exp( - (x./p(3)).^p(4) ) ;
-options = optimoptions('fmincon','Display','off');
-for ii=1:nSubs
-    y=Xcoeff(ii,:,1);
-    % Determine the max amplitude from y
-    if y(nPSIs)<y(nPSIs-1)
-        maxY(ii) = mean(y(nPSIs-1:nPSIs));
-    else
-        maxY(ii) = y(nPSIs);
-    end
-    ub(2) = maxY(ii);
-    myObj = @(p) norm(y-weibullCDF(x,p));
-    p(ii,:) = fmincon(myObj,[0 1000 1 1],[],[],[],[],lb,ub,[],options);
-    yFit = weibullCDF(xFit,p(ii,:))./p(ii,2);
-    subplot(2,9,ii);
-    plot(x+xShift,y./p(ii,2),'ok'); hold on; plot(xFit+xShift,yFit,'-r');
-    [~,idx] = min(abs(yFit-0.5));
-    plot([xFit(idx)+xShift xFit(idx)+xShift],[0 0.5],'-m');
-    plot([xShift xFit(idx)+xShift],[0.5 0.5],'-m');
-    x50(ii) = 10^(xFit(idx)+xShift);
-    xlim([-1.1 2.1]);
-    ylim([-0.1 1.1]);
-    axHandle = gca;
-    axHandle.XTickLabel = cellstr(string([0.1 1 10 100]));
-end
-
-% Repeat now and obtain the coefficients from the first and second session
-for ii=1:nSubs
-    for ss = 1:2
-        switch ss
-            case 1
-                y=X1coeff(ii,:,1);
-            case 2
-                y=X2coeff(ii,:,1);
-        end
-    ub(2) = maxY(ii);
-    myObj = @(p) norm(y-weibullCDF(x,p));
-    pSess(ss,ii,:) = fmincon(myObj,[0 1000 1 1],[],[],[],[],lb,ub,[],options);
-    yFit = weibullCDF(xFit,p(ii,:))./p(ii,2);
-    [~,idx] = min(abs(yFit-0.5));
-    x50Sess(ss,ii) = 10^(xFit(idx)+xShift);
-    end
-end
