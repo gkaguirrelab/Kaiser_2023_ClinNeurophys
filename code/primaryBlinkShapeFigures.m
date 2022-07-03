@@ -8,6 +8,11 @@ psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
 trialColors = [0:(0.5/7):0.5; 0:(0.5/7):0.5; 1.0:-(0.5/7):0.5]';
 
 
+%% Report the variance explained by the model
+tVar = var(X_mat(:));
+fVar = var(X_matfit(:));
+fprintf('Proportion variance explained by the model is: %2.2f \n',fVar/tVar);
+
 %% Acquisition order and example raw set of blinks
 psiAcqOrder = [4 4 1 3 5 5 3 1 2 4 2 2 1 5 4 3 3 4 5 2 3 2 5 1 1 4];
 figure
@@ -69,7 +74,7 @@ saveas(gcf,fullfile(plotSaveDir,'acquisitionOrder.pdf'));
 
 %% Average blink response by puff pressure
 figure
-set(gcf, 'Position',  [100, 100, 800, 200])
+set(gcf, 'Position',  [100, 100, 600, 200])
 tmpX = squeeze(mean(X,1));
 tmpXfit = squeeze(mean(Xfit,1));
 tmpXfit = tmpXfit - tmpXfit(:,1);
@@ -78,7 +83,7 @@ for pp = 1:nPSIs
     plot(temporalSupport,tmpX(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
     hold on
     subplot(1,2,2)
-    plot(temporalSupport,tmpXfit(pp,:),'--','Color',psiColors(pp,:),'LineWidth',1.5)
+    plot(temporalSupport,tmpXfit(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
     hold on
 end
 for mm=1:2
@@ -126,11 +131,12 @@ velocityFactor = mean(diff(tPoint))/deltaVelocityComponent;
 
 % Time to plot
 figure
+set(gcf, 'Position',  [100, 100, 200, 600])
 meanCoeff = squeeze(mean(Xcoeff,1));
 semCoeff = squeeze(std(Xcoeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:3
-    subplot(2,2,plotOrder(cc))
+    subplot(3,1,plotOrder(cc))
     for pp = 1:nPSIs
         plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
         hold on
@@ -149,11 +155,13 @@ for cc=1:3
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
+            ylim([-coeffVal5msec*1.5 coeffVal5msec*1.75]);
             axHandle = gca;
             axHandle.YTick = [-coeffVal5msec 0 coeffVal5msec];
             axHandle.YTickLabel = {'5','0','-5'};
             ylabel('latency shift [msecs]');
         case 3
+            ylim([-0.2 0.2]);
             ylabel('arbitrary units');
     end
 end
@@ -232,20 +240,15 @@ for ss=1:nSubs
         xlabel('stimulus [PSI]');
         ylabel('proportion');
     end
-    subplot(3,6,18)
-    plot(xFit(idx)+xShift,ss,'.b');
-    hold on
-    xlabel('stimulus [PSI]');
-    xlim([-1 2.1]);
-    axHandle = gca;
-    axHandle.XTickLabel = cellstr(string(10.^axHandle.XTick));
 end
+saveas(gcf,fullfile(plotSaveDir,'weibullFitToAmplitude.pdf'));
+
 
 
 %% Scatter plot of test / retest of x50 on amplitude
 figure
 vals = log10(x50Sess);
-scatter(vals(1,:),vals(2,:),'MarkerFaceColor','k','MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
+scatter(vals(1,:),vals(2,:),100,'r');
 titleStr = sprintf('x50 param r=%2.2f',corr(vals(1,:)',vals(2,:)'));
 title(titleStr);
 axis square; box off
@@ -263,19 +266,35 @@ refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
 
 
-
 %% Plot of the coefficients by trial number
 figure
+set(gcf, 'Position',  [100, 100, 200, 600])
 meanCoeff = squeeze(mean(trialX_coeff,1));
 semCoeff = squeeze(std(trialX_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:length(plotOrder)
-    subplot(2,2,plotOrder(cc))
+    subplot(3,1,plotOrder(cc))
     for pp = 1:8
         plot([pp pp],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
         hold on
         plot(pp,meanCoeff(pp,cc),'o',...
             'MarkerFaceColor',componentColors(cc,:),'MarkerEdgeColor','none' );
+    end
+    switch cc
+        case 1
+            ylabel('proportion blink');
+        case 2
+            % Convert the coefficient values to units of msecs. A
+            % coefficient value equivalent to a 5 msec latency shift is
+            coeffVal5msec = -5/velocityFactor;
+            ylim([-coeffVal5msec*1.5 coeffVal5msec*1.5]);
+            axHandle = gca;
+            axHandle.YTick = [-coeffVal5msec 0 coeffVal5msec];
+            axHandle.YTickLabel = {'5','0','-5'};
+            ylabel('latency shift [msecs]');
+        case 3
+            ylim([-0.2 0.2]);
+            ylabel('arbitrary units');
     end
     xticks(1:8);
     xlabel('trial number')
@@ -294,90 +313,6 @@ for ii=1:8
 end
 saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
 
-% 
-% 
-% %% Show scatter plots of across-session amplitude and speed
-% limVals = {...
-%     [0 700],[-100 300];...
-%     [0 1000],[-150 150]};
-% subIdxToShow = {[8,13],[16,9]}; % [14, 13]
-% nameRow = {'slope','offset'};
-% axisLabels = {'amplitude','velocity'};
-% figure
-% subjectLineStyle = {'-',':'};
-% 
-% for rr=1:2
-%     subplot(2,3,(2-rr)*3+1);
-%     vals1 = ampPuffCoeff(:,rr);
-%     vals2 = speedPuffCoeff(:,rr);
-%     scatter(vals1,vals2,'MarkerFaceColor',[0.25 0.25 0.25],'MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
-%     xlim(limVals{rr,1}); ylim(limVals{rr,2});
-%     xlabel([axisLabels{1} ' ' nameRow{rr} ' [a.u.]']);
-%     ylabel([axisLabels{2} ' ' nameRow{rr} ' [a.u.]']);
-%     axis square; box off
-%     titleStr = nameRow{rr};
-%     title(titleStr);
-%     hold on
-%     for ss=1:length(subIdxToShow{rr})
-%         dims = [range(xlim)/10, range(ylim)/10];
-%         pos = [vals1(subIdxToShow{rr}(ss))-dims(1)/2,vals2(subIdxToShow{rr}(ss))-dims(2)/2,dims(1),dims(2)];
-%         rectangle('Position',pos,'Curvature',[1,1],'LineStyle',subjectLineStyle{ss},'EdgeColor','r')
-%     end
-%     if rr==2
-%         pressureToPlotIdx = [0 0 1 0 0];
-%     else
-%         pressureToPlotIdx = [1 1 1 1 1];
-%     end
-%     for ss=1:length(subIdxToShow{rr})
-%         subplot(2,3,(2-rr)*3+1+ss);
-%         for pp=1:length(pressureToPlotIdx)
-%             if pressureToPlotIdx(pp)==1
-%                 plot(temporalSupport, returnBlinkTimeSeries( subjectIDs{subIdxToShow{rr}(ss)}, targetPSISet(pp) ), subjectLineStyle{ss}, 'Color', psiColors(pp,:),'LineWidth',1);
-%                 hold on
-%             end
-%         end
-%         ylim([-150 25]);
-%         plot([-100 -100],[0 -100],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
-%         plot([-100 0],[-125 -125],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
-%         axis off
-%     end
-% end
-% saveas(gcf,fullfile(plotSaveDir,'subjectCoeffDistribution.pdf'));
-% 
-% 
-% %% Show scatter plots of test / retest of overall amplitude and speed
-% limVals = {...
-%     [0 800],[-100 300];...
-%     [0 1000],[-200 200]};
-% symbolColors={'k','b'};
-% nameRow = {'slope','offset'};
-% axisLabels = {'amplitude','velocity'};
-% figure
-% for cc=1:2
-%     for rr=1:2
-%         subplot(2,2,(2-rr)*2+cc);
-%         if cc==1
-%             vals1 = ampPuffCoeff1(:,rr);
-%             vals2 = ampPuffCoeff2(:,rr);
-%         else
-%             vals1 = speedPuffCoeff1(:,rr);
-%             vals2 = speedPuffCoeff2(:,rr);
-%         end
-%         scatter(vals1,vals2,'MarkerFaceColor',symbolColors{cc},'MarkerEdgeColor','none','MarkerFaceAlpha',0.5);
-%         xlim(limVals{rr,cc}); ylim(limVals{rr,cc});
-%         titleStr = sprintf([axisLabels{cc} ' ' nameRow{rr} ' r=%2.2f'],corr(vals1,vals2));
-%         title(titleStr);
-%         axis square; box off
-%         xlabel([axisLabels{cc} ' ' nameRow{rr} ' [a.u.]']);
-%         ylabel([axisLabels{cc} ' ' nameRow{rr} ' [a.u.]']);
-%         a=gca;
-%         a.YTick = a.XTick;
-%         a.YTickLabel = a.XTickLabel;
-%         refline(1,0);
-%     end
-% end
-% saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
-% 
 
 
 %% Illustration of all blink responses and ICA model fit
