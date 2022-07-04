@@ -21,15 +21,16 @@
 % their eyes and never subsequently opened them.
 %
 % The data are combined across sessions, and the 17x5 (subject x pressure)
-% blink responses are subjected to an Independent Component Analysis,
-% intialized with the mean chained derivatives of the average blink
-% response.
+% blink responses are subjected to an analysis using a model derived from
+% the amplitude, velocity, and remaining shape variation of the response.
 
 % housekeeping
 close all
 clear
 
-% Some analysis settings
+% There is a large blink response to the first of the 8 trials in each
+% acquisition. This flag controls whether this first trial is discarded in
+% the analysis.
 discardFirstTrialFlag = true;
 
 % Get the location to save plots
@@ -58,7 +59,7 @@ nBlinksPerAcq = 8;
 % Number of session
 nSessions = 2;
 
-% Define variables to hold the time-series dat
+% Define variables to hold the time-series data
 X = zeros(nSubs,nPSIs,nTimePoints);
 XSess = zeros(nSessions,nSubs,nPSIs,nTimePoints);
 nTrials = zeros(nSubs,5);
@@ -81,6 +82,7 @@ end
 % Loop through subjects and pressure levels. Load the full and by-session
 % data separately. As each time-series is loaded, scale it by the max
 % excursion so that the response is in units of proportion of maximal blink
+% for that session and eye.
 for ss=1:nSubs
     for pp=1:nPSIs
         for tt=1:nSessions
@@ -138,7 +140,7 @@ for ii=1:size(X_mat,1)
     X_resid(ii,:) = y;
 end
 
-% Reset the random seed
+% Reset the random seed to ensure a consistent PCA result
 rng;
 
 % Conduct a PCA to find the most informative third component
@@ -152,7 +154,7 @@ components = components ./ range(components);
 % Conduct the regression and obtain the coefficients
 for ii=1:size(X_mat,1)
 
-    % For the primary analysis of the ipsi response
+    % Primary analysis of the ipsi response
     y = X_mat(ii,:);
     offset = mean(y);
     y = y - offset;
@@ -160,14 +162,14 @@ for ii=1:size(X_mat,1)
     X_matcoeff(ii,:) = b;
     X_matfit(ii,:) = b*components' + offset;
 
-    % For the secondary analysis of the contra response
+    % Secondary analysis of the contra response
     y = XContra_mat(ii,:);
     offset = mean(y);
     y = y - offset;
     b = regress(y',components)';
     XContra_matcoeff(ii,:) = b;
 
-    % Get the coefficients by sesssion (just for ipsi)
+    % Coefficients by sesssion (just for ipsi)
     for ss=1:nSessions
         y = squeeze(XSess_mat(ss,ii,:))';
         offset = mean(y);

@@ -13,6 +13,7 @@ tVar = var(X_mat(:));
 fVar = var(X_matfit(:));
 fprintf('Proportion variance explained by the model is: %2.2f \n',fVar/tVar);
 
+
 %% Acquisition order and example raw set of blinks
 psiAcqOrder = [4 4 1 3 5 5 3 1 2 4 2 2 1 5 4 3 3 4 5 2 3 2 5 1 1 4];
 figure
@@ -109,7 +110,7 @@ for cc = plotOrder
 end
 legend(componentNames(plotOrder))
 xlabel('time [msecs]');
-ylabel('component value [a.u.]');
+ylabel('component value');
 saveas(gcf,fullfile(plotSaveDir,'ModelComponents.pdf'));
 
 
@@ -168,14 +169,12 @@ end
 saveas(gcf,fullfile(plotSaveDir,'coefficientsByPSI.pdf'));
 
 
-
-
-
 %% Fit a weibullCDF to the amplitude data
 
 % Define an increasing weibull CDF with 4 parameters. Assume that there is
 % a zero amplitude response at some zero stimulus.
 figure
+set(gcf, 'Position',  [100, 100, 200, 800])
 xShift = log10(0.01);
 x = log10(targetPSISet)-xShift;
 deltaX = x(2)-x(1);
@@ -183,45 +182,71 @@ xFit = linspace(xShift,log10(100),1000)-xShift;
 deltaXFit = xFit(2)-xFit(1);
 lb = [0 1 0 0];
 ub = [0 1 5 12];
+p0 = [0 1 2.5 5];
 weibullCDF = @(x,p) p(1) + p(2) - p(2)*exp( - (x./p(3)).^p(4) ) ;
 options = optimoptions('fmincon','Display','off');
 for ii=1:nSubs
+
+    % Ipsilateral response
     y = Xcoeff(ii,:,1);
     y = y ./ max(y);
     if y(nPSIs-1)>y(nPSIs)
         weights = [ones(1,nPSIs-1) 0.5];
     else
-        weights=ones(1,nPSIs);
+        weights = ones(1,nPSIs);
     end
     myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-    p(ii,:) = fmincon(myObj,[0 1 2.5 5],[],[],[],[],lb,ub,[],options);
+    p(ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
     yFit = weibullCDF(xFit,p(ii,:));
     [~,idx] = min(abs(yFit-0.5));
     x50(ii) = 10^(xFit(idx)+xShift);
+    maxSlope(ii) = max(diff(yFit))/deltaXFit;
+
+    % Contralateral response
+    y = XContraCoeff(ii,:,1);
+    y = y ./ max(y);
+    if y(nPSIs-1)>y(nPSIs)
+        weights = [ones(1,nPSIs-1) 0.5];
+    else
+        weights = ones(1,nPSIs);
+    end
+    myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
+    pContra(ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+    yFit = weibullCDF(xFit,pContra(ii,:));
+    [~,idx] = min(abs(yFit-0.5));
+    x50Contra(ii) = 10^(xFit(idx)+xShift);
+    maxSlopeContra(ii) = max(diff(yFit))/deltaXFit;
 
     % Now fit by session
     for tt=1:nSessions
 
-        y = squeeze(XSessCoeff(tt,ii,:,1));
+        y = squeeze(XSessCoeff(tt,ii,:,1))';
         y = y ./ max(y);
+        if y(nPSIs-1)>y(nPSIs)
+            weights = [ones(1,nPSIs-1) 0.5];
+        else
+            weights = ones(1,nPSIs);
+        end
+
         myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-        tmpP = fmincon(myObj,p(ii,:),[],[],[],[],lb,ub,[],options);
+        tmpP = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
         yFit = weibullCDF(xFit,tmpP);
         [~,idx] = min(abs(yFit-0.5));
         x50Sess(tt,ii) = 10^(xFit(idx)+xShift);
+        maxSlopeSess(tt,ii) = max(diff(yFit))/deltaXFit;
 
     end
 
 end
 
-% Now plot the subject fits in order of sensitivity
+% Plot the subject fits in order of sensitivity
 [~,sortOrder]=sort(x50,'descend');
 for ss=1:nSubs
     ii = sortOrder(ss);
     y=Xcoeff(ii,:,1);
     y = y ./ max(y);
     yFit = weibullCDF(xFit,p(ii,:));
-    subplot(3,6,ss)
+    subplot(9,2,ss)
     plot(xFit+xShift,yFit,'-r');
     hold on;
     plot(x+xShift,y,'ok');
@@ -245,25 +270,111 @@ saveas(gcf,fullfile(plotSaveDir,'weibullFitToAmplitude.pdf'));
 
 
 
+%% Illustrate individual differences in amplitude parameters
+figure
+subIdxToShow = [sortOrder(2),sortOrder(end-1)];
+for ss=1:length(subIdxToShow)
+    subplot(1,2,ss);
+    for pp=1:nPSIs
+        plot(temporalSupport, squeeze(X( subIdxToShow(ss), pp, :)), 'Color', psiColors(pp,:),'LineWidth',1);
+        hold on
+    end
+    ylim([-1.1 0.2]);
+    box off
+end
+saveas(gcf,fullfile(plotSaveDir,'blinkResponseSubjectExtremeX50.pdf'));
+
+
 %% Scatter plot of test / retest of x50 on amplitude
 figure
 vals = log10(x50Sess);
 scatter(vals(1,:),vals(2,:),100,'r');
-titleStr = sprintf('x50 param r=%2.2f',corr(vals(1,:)',vals(2,:)'));
+[Rval,Pval] = corrcoef(vals(1,:),vals(2,:));
+titleStr = sprintf('x50 param r=%2.2f, p=%2.5f',Rval(2),Pval(2));
 title(titleStr);
 axis square; box off
 xlabel('S1 stimulus [log PSI]');
 ylabel('S2 stimulus [log PSI]');
 a=gca;
-xlim([-0.32 1.7]);
-ylim([-0.32 1.7]);
+xlim([-1 1.7]);
+ylim([-1 1.7]);
 axis square
-a.XTick = log10([0.5 1 5 10 50]);
-a.YTick = log10([0.5 1 5 10 50]);
-a.XTickLabel = {'0.5','1','5','10','50'};
-a.YTickLabel = {'0.5','1','5','10','50'};
+a.XTick = log10([0.1 0.5 1 5 10 50]);
+a.YTick = log10([0.1 0.5 1 5 10 50]);
+a.XTickLabel = {'0.1','0.5','1','5','10','50'};
+a.YTickLabel = {'0.1','0.5','1','5','10','50'};
 refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
+
+% Report the test / retest correlation of slope
+[Rval,Pval] = corrcoef(maxSlopeSess(1,:),maxSlopeSess(2,:));
+fprintf('Test / retest correlation of slope parameter: r=%2.2f, p=%2.5f \n',Rval(2),Pval(2));
+
+
+%% Illustration of ipsi vs. contra sensitivity
+faceColors = {'k','none'};
+edgeColors = {'none','k'};
+lineColors = {'-r','--r'};
+figure
+subplot(1,2,1)
+for cc = 1:2
+    switch cc
+        case 1
+            y = squeeze(mean(Xcoeff(:,:,1),1));
+            ySEM = squeeze(std(Xcoeff,1))./sqrt(nSubs);
+        case 2
+            y = squeeze(mean(XContraCoeff(:,:,1),1));
+            ySEM = squeeze(std(XContraCoeff,1))./sqrt(nSubs);
+    end
+    y = y./max(y);
+    if y(nPSIs-1)>y(nPSIs)
+        weights = [ones(1,nPSIs-1) 0.5];
+    else
+        weights = ones(1,nPSIs);
+    end
+    myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
+    pFit = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+    yFit = weibullCDF(xFit,pFit);
+    for pp = 1:nPSIs
+        plot(x(pp)+xShift,y(pp),'o',...
+            'MarkerFaceColor',faceColors{cc},'MarkerEdgeColor',edgeColors{cc} );
+        hold on
+    end
+    plot(xFit+xShift,yFit,lineColors{cc});
+end
+xticks(log10(targetPSISet));
+xticklabels(arrayfun(@num2str, targetPSISet, 'UniformOutput', 0));
+xlabel('stimulus intensity [log PSI]')
+ylabel('proportion blink');
+ylim([0 1.1]);
+xlim([0.1 2]);
+axis square
+
+subplot(1,2,2)
+scatter(log10(x50),log10(x50Contra),100,'r');
+axis square; box off
+xlabel('stimulus at 50% ipsilateral blink [log PSI]');
+ylabel('stimulus at 50% contralateral blink [log PSI]');
+a=gca;
+xlim([-1 1.7]);
+ylim([-1 1.7]);
+axis square
+a.XTick = log10([0.1 0.5 1 5 10 50]);
+a.YTick = log10([0.1 0.5 1 5 10 50]);
+a.XTickLabel = {'0.1','0.5','1','5','10','50'};
+a.YTickLabel = {'0.1','0.5','1','5','10','50'};
+axis square
+refline(1,0);
+saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
+
+% Report the ttest ipsi vs. contra
+[~,Tpval,~,Tstats] = ttest(log10(x50),log10(x50Contra));
+fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+    10^mean(log10(x50)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
+[~,Tpval,~,Tstats] = ttest(maxSlope,maxSlopeContra);
+fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+    mean(maxSlope),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
+
 
 
 %% Plot of the coefficients by trial number
@@ -312,7 +423,6 @@ for ii=1:8
     hold on
 end
 saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
-
 
 
 %% Illustration of all blink responses and ICA model fit
