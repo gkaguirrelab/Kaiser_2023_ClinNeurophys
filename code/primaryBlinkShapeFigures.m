@@ -180,9 +180,9 @@ x = log10(targetPSISet)-xShift;
 deltaX = x(2)-x(1);
 xFit = linspace(xShift,log10(100),1000)-xShift;
 deltaXFit = xFit(2)-xFit(1);
-lb = [0 1 0 0];
-ub = [0 1 5 12];
-p0 = [0 1 2.5 5];
+lb = [0 1 2 5];
+ub = [0 1 5 15];
+p0 = [0 1 2.5 6];
 weibullCDF = @(x,p) p(1) + p(2) - p(2)*exp( - (x./p(3)).^p(4) ) ;
 options = optimoptions('fmincon','Display','off');
 for ii=1:nSubs
@@ -200,7 +200,7 @@ for ii=1:nSubs
     yFit = weibullCDF(xFit,p(ii,:));
     [~,idx] = min(abs(yFit-0.5));
     x50(ii) = 10^(xFit(idx)+xShift);
-    maxSlope(ii) = max(diff(yFit))/deltaXFit;
+    slopeAt50(ii) = max(diff(yFit))/deltaXFit;
 
     % Contralateral response
     y = XContraCoeff(ii,:,1);
@@ -215,7 +215,7 @@ for ii=1:nSubs
     yFit = weibullCDF(xFit,pContra(ii,:));
     [~,idx] = min(abs(yFit-0.5));
     x50Contra(ii) = 10^(xFit(idx)+xShift);
-    maxSlopeContra(ii) = max(diff(yFit))/deltaXFit;
+    slopeAt50Contra(ii) = max(diff(yFit))/deltaXFit;
 
     % Now fit by session
     for tt=1:nSessions
@@ -229,11 +229,11 @@ for ii=1:nSubs
         end
 
         myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-        tmpP = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
-        yFit = weibullCDF(xFit,tmpP);
+        pSess(tt,ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+        yFit = weibullCDF(xFit,squeeze(pSess(tt,ii,:))');
         [~,idx] = min(abs(yFit-0.5));
         x50Sess(tt,ii) = 10^(xFit(idx)+xShift);
-        maxSlopeSess(tt,ii) = max(diff(yFit))/deltaXFit;
+        slopeAt50Sess(tt,ii) = max(diff(yFit))/deltaXFit;
 
     end
 
@@ -287,28 +287,38 @@ saveas(gcf,fullfile(plotSaveDir,'blinkResponseSubjectExtremeX50.pdf'));
 
 %% Scatter plot of test / retest of x50 on amplitude
 figure
-vals = log10(x50Sess);
-scatter(vals(1,:),vals(2,:),100,'r');
-[Rval,Pval] = corrcoef(vals(1,:),vals(2,:));
-titleStr = sprintf('x50 param r=%2.2f, p=%2.5f',Rval(2),Pval(2));
-title(titleStr);
-axis square; box off
-xlabel('S1 stimulus [log PSI]');
-ylabel('S2 stimulus [log PSI]');
-a=gca;
-xlim([-1 1.7]);
-ylim([-1 1.7]);
-axis square
-a.XTick = log10([0.1 0.5 1 5 10 50]);
-a.YTick = log10([0.1 0.5 1 5 10 50]);
-a.XTickLabel = {'0.1','0.5','1','5','10','50'};
-a.YTickLabel = {'0.1','0.5','1','5','10','50'};
-refline(1,0);
+for pp=1:2
+    subplot(1,2,pp)
+    switch pp
+        case 1
+            vals = log10(x50Sess);
+        case 2
+            vals = slopeAt50Sess;
+    end
+    scatter(vals(1,:),vals(2,:),100,'r');
+    [Rval,Pval] = corrcoef(vals(1,:),vals(2,:));
+    titleStr = sprintf('corr param r=%2.2f, p=%2.5f',Rval(2),Pval(2));
+    title(titleStr);
+    axis square; box off
+    switch pp
+        case 1
+            xlabel('S1 half-response stimulus [PSI]');
+            ylabel('S2 half-response stimulus [PSI]');
+            a=gca;
+            xlim([0 1.7]);
+            ylim([0 1.7]);
+            axis square
+            a.XTick = log10([1 5 10 50]);
+            a.YTick = log10([1 5 10 50]);
+            a.XTickLabel = {'1','5','10','50'};
+            a.YTickLabel = {'1','5','10','50'};
+        case 2
+            xlabel({'S1 max slope','[proportion / log PSI]'});
+            ylabel({'S2 max slope','[proportion / log PSI]'});
+    end
+    refline(1,0);
+end
 saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
-
-% Report the test / retest correlation of slope
-[Rval,Pval] = corrcoef(maxSlopeSess(1,:),maxSlopeSess(2,:));
-fprintf('Test / retest correlation of slope parameter: r=%2.2f, p=%2.5f \n',Rval(2),Pval(2));
 
 
 %% Illustration of ipsi vs. contra sensitivity
@@ -316,7 +326,9 @@ faceColors = {'k','none'};
 edgeColors = {'none','k'};
 lineColors = {'-r','--r'};
 figure
-subplot(1,2,1)
+set(gcf, 'Position',  [100, 100, 840, 420])
+
+subplot(1,3,1)
 for cc = 1:2
     switch cc
         case 1
@@ -350,30 +362,42 @@ ylim([0 1.1]);
 xlim([0.1 2]);
 axis square
 
-subplot(1,2,2)
+subplot(1,3,2)
 scatter(log10(x50),log10(x50Contra),100,'r');
 axis square; box off
-xlabel('stimulus at 50% ipsilateral blink [log PSI]');
-ylabel('stimulus at 50% contralateral blink [log PSI]');
+xlabel('ipsi half-response stimulus [PSI]');
+ylabel('contra half-response stimulus [PSI]');
 a=gca;
-xlim([-1 1.7]);
-ylim([-1 1.7]);
+xlim([0 1.7]);
+ylim([0 1.7]);
 axis square
-a.XTick = log10([0.1 0.5 1 5 10 50]);
-a.YTick = log10([0.1 0.5 1 5 10 50]);
-a.XTickLabel = {'0.1','0.5','1','5','10','50'};
-a.YTickLabel = {'0.1','0.5','1','5','10','50'};
+a.XTick = log10([1 5 10 50]);
+a.YTick = log10([1 5 10 50]);
+a.XTickLabel = {'1','5','10','50'};
+a.YTickLabel = {'1','5','10','50'};
+axis square
+refline(1,0);
+saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
+
+subplot(1,3,3)
+scatter(slopeAt50,slopeAt50Contra,100,'r');
+axis square; box off
+xlabel({'ipsi max slope','[proportion / log PSI]'});
+ylabel({'contra max slope','[proportion / log PSI]'});
+a=gca;
+xlim([0.5 2]);
+ylim([0.5 2]);
 axis square
 refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
 % Report the ttest ipsi vs. contra
 [~,Tpval,~,Tstats] = ttest(log10(x50),log10(x50Contra));
-fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+fprintf('T-test ipsi vs. contral x50 vals: means = [%2.1f, %2.1f], t(df)=%2.2f (%d), p=%2.9f \n',...
     10^mean(log10(x50)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
-[~,Tpval,~,Tstats] = ttest(maxSlope,maxSlopeContra);
-fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
-    mean(maxSlope),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
+[~,Tpval,~,Tstats] = ttest(slopeAt50,slopeAt50Contra);
+fprintf('T-test ipsi vs. contral max slope vals: means = [%2.1f, %2.1f], t(df)=%2.2f (%d), p=%2.9f \n',...
+    mean(slopeAt50),mean(slopeAt50Contra),Tstats.tstat,Tstats.df,Tpval);
 
 
 
@@ -394,15 +418,15 @@ for cc=1:length(plotOrder)
     switch cc
         case 1
             ylabel('proportion blink');
-             myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
-             myObj = @(p) norm(meanCoeff(:,1)' - myExpFunc(p,1:nBlinksPerAcq));
-             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
-             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
+            myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+            myObj = @(p) norm(meanCoeff(:,1)' - myExpFunc(p,1:nBlinksPerAcq));
+            myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+            plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
         case 2
-             myExpFunc = @(p,x) p(3) - p(1).*exp(-( x./p(2) ));
-             myObj = @(p) norm(meanCoeff(:,2)' - myExpFunc(p,1:nBlinksPerAcq));
-             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
-             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
+            myExpFunc = @(p,x) p(3) - p(1).*exp(-( x./p(2) ));
+            myObj = @(p) norm(meanCoeff(:,2)' - myExpFunc(p,1:nBlinksPerAcq));
+            myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+            plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
@@ -412,10 +436,10 @@ for cc=1:length(plotOrder)
             axHandle.YTickLabel = {'5','0','-5'};
             ylabel('latency shift [msecs]');
         case 3
-             myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
-             myObj = @(p) norm(meanCoeff(:,3)' - myExpFunc(p,1:nBlinksPerAcq));
-             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
-             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
+            myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+            myObj = @(p) norm(meanCoeff(:,3)' - myExpFunc(p,1:nBlinksPerAcq));
+            myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+            plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
             ylim([-0.2 0.2]);
             ylabel('arbitrary units');
     end
@@ -437,7 +461,7 @@ end
 saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
 
 
-%% Illustration of all blink responses and ICA model fit
+%% Illustration of all blink responses and model fit
 betweenSubGap = 1;
 grayScaleRangePixels = [0.25 -1];
 
