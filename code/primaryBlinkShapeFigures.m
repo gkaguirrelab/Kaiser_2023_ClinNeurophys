@@ -385,7 +385,7 @@ semCoeff = squeeze(std(trialX_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:length(plotOrder)
     subplot(3,1,plotOrder(cc))
-    for pp = 1:8
+    for pp = 1:nBlinksPerAcq
         plot([pp pp],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
         hold on
         plot(pp,meanCoeff(pp,cc),'o',...
@@ -394,7 +394,15 @@ for cc=1:length(plotOrder)
     switch cc
         case 1
             ylabel('proportion blink');
+             myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+             myObj = @(p) norm(meanCoeff(:,1)' - myExpFunc(p,1:nBlinksPerAcq));
+             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
         case 2
+             myExpFunc = @(p,x) p(3) - p(1).*exp(-( x./p(2) ));
+             myObj = @(p) norm(meanCoeff(:,2)' - myExpFunc(p,1:nBlinksPerAcq));
+             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
@@ -404,6 +412,10 @@ for cc=1:length(plotOrder)
             axHandle.YTickLabel = {'5','0','-5'};
             ylabel('latency shift [msecs]');
         case 3
+             myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+             myObj = @(p) norm(meanCoeff(:,3)' - myExpFunc(p,1:nBlinksPerAcq));
+             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
             ylim([-0.2 0.2]);
             ylabel('arbitrary units');
     end
