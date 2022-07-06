@@ -132,7 +132,7 @@ XAll_mat = [reshape(XIpsi,nSubs*nPSIs,nTimePoints); reshape(XContra,nSubs*nPSIs,
 %% Create a regression matrix
 
 % We will have three covariates
-q=4;
+q=3;
 
 % This is the average response and its first derivative
 components = [];
@@ -157,7 +157,7 @@ rng default;
 
 % Conduct a PCA to find the most informative third component
 pcaCoeff = pca(X_resid);
-components = [components, -pcaCoeff(:,1), pcaCoeff(:,2)];
+components = [components, -pcaCoeff(:,1)];
 
 % Scale these to have unit excursion and mean center
 components = components - mean(components);

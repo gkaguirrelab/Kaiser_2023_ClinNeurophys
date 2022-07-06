@@ -242,7 +242,7 @@ end
 % Get the mean params across bootstraps
 for ii=1:nSubs
     x50Both(ii) = mean(x50Boot(:,ii));
-    maxBoth(ii) = mean(maxSlopeBoot(:,ii));
+    maxSlopeBoth(ii) = mean(maxSlopeBoot(:,ii));
 end
 
 % Plot the subject fits in order of sensitivity
@@ -301,7 +301,7 @@ for ii=1:nSubs
     plotBivariateEllipse(log10(squeeze(x50Boot(:,ii))),squeeze(maxSlopeBoot(:,ii)),P)
 end
 axis square; box off
-ylim([0 1.5]);
+ylim([0 2]);
 xlabel('Half-response threshold [PSI]');
 xlim([-1 1.5]);
 a=gca;
