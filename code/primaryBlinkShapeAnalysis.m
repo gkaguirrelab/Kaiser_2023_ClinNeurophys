@@ -32,6 +32,8 @@ clear
 % acquisition. This flag controls whether this first trial is discarded in
 % the analysis.
 discardFirstTrialFlag = true;
+discardSquintScansFlag = false;
+nBoots = 1000;
 
 % Get the location to save plots
 plotSaveDir = getpref('blinkCNSAnalysis','plotSaveDir');
@@ -61,7 +63,9 @@ nSessions = 2;
 
 % Define variables to hold the time-series data
 X = zeros(nSubs,nPSIs,nTimePoints);
-XSess = zeros(nSessions,nSubs,nPSIs,nTimePoints);
+XIpsi = zeros(nSubs,nPSIs,nTimePoints);
+XSessIpsi = zeros(nSessions,nSubs,nPSIs,nTimePoints);
+XSessContra = zeros(nSessions,nSubs,nPSIs,nTimePoints);
 nTrials = zeros(nSubs,5);
 
 % Loop through the subjects and identify the largest excursion seen for
@@ -69,12 +73,12 @@ nTrials = zeros(nSubs,5);
 for ss=1:nSubs
     for tt=1:nSessions
         maxExcursionIpsi(ss,tt) = -min([...
-            min(returnBlinkTimeSeries( subjectIDs{ss}, 30, tt, 'ipsi', discardFirstTrialFlag )),...
-            min(returnBlinkTimeSeries( subjectIDs{ss}, 60, tt, 'ipsi', discardFirstTrialFlag )),...
+            min(returnBlinkTimeSeries( subjectIDs{ss}, 30, tt, 'ipsi', discardFirstTrialFlag, discardSquintScansFlag )),...
+            min(returnBlinkTimeSeries( subjectIDs{ss}, 60, tt, 'ipsi', discardFirstTrialFlag, discardSquintScansFlag )),...
             ]);
         maxExcursionContra(ss,tt) = -min([...
-            min(returnBlinkTimeSeries( subjectIDs{ss}, 30, tt, 'contra', discardFirstTrialFlag )),...
-            min(returnBlinkTimeSeries( subjectIDs{ss}, 60, tt, 'contra', discardFirstTrialFlag )),...
+            min(returnBlinkTimeSeries( subjectIDs{ss}, 30, tt, 'contra', discardFirstTrialFlag, discardSquintScansFlag )),...
+            min(returnBlinkTimeSeries( subjectIDs{ss}, 60, tt, 'contra', discardFirstTrialFlag, discardSquintScansFlag )),...
             ]);
     end
 end
@@ -86,11 +90,23 @@ end
 for ss=1:nSubs
     for pp=1:nPSIs
         for tt=1:nSessions
-            XSess(tt,ss,pp,:) = returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), tt, 'ipsi', discardFirstTrialFlag) ./ maxExcursionIpsi(ss,tt);
-            XSessContra(tt,ss,pp,:) = returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), tt, 'contra', discardFirstTrialFlag) ./ maxExcursionContra(ss,tt);
+            [XSessIpsi(tt,ss,pp,:),~,~,~,~,XessIpsiBoots] = ...
+                returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), tt, 'ipsi',...
+                discardFirstTrialFlag, discardSquintScansFlag, nBoots);
+            XSessIpsi(tt,ss,pp,:) = XSessIpsi(tt,ss,pp,:)./ maxExcursionIpsi(ss,tt);
+            XSessIpsiBoots{tt,ss,pp} = XessIpsiBoots./ maxExcursionIpsi(ss,tt);
+
+            [XSessContra(tt,ss,pp,:),~,~,~,~,XessContraBoots] = ...
+                returnBlinkTimeSeries( subjectIDs{ss}, targetPSISet(pp), tt, 'contra',...
+                discardFirstTrialFlag, discardSquintScansFlag, nBoots);
+            XSessContra(tt,ss,pp,:) = XSessContra(tt,ss,pp,:)./ maxExcursionContra(ss,tt);
+            XSessContraBoots{tt,ss,pp} = XessContraBoots./ maxExcursionContra(ss,tt);
         end
-        X(ss,pp,:) = (XSess(1,ss,pp,:)+XSess(2,ss,pp,:))./2;
+        XIpsi(ss,pp,:) = (XSessIpsi(1,ss,pp,:)+XSessIpsi(2,ss,pp,:))./2;
         XContra(ss,pp,:) = (XSessContra(1,ss,pp,:)+XSessContra(2,ss,pp,:))./2;
+        XBoth(ss,pp,:) = ( XIpsi(ss,pp,:) +  XContra(ss,pp,:) )./2;
+        XBothBoot{ss,pp} = ( XSessIpsiBoots{1,ss,pp} + XSessIpsiBoots{2,ss,pp} + ...
+            XSessContraBoots{1,ss,pp} + XSessContraBoots{2,ss,pp} )./4;
     end
 
     % Get the raw vector and obtain the blinks averaged by trial index for
@@ -111,28 +127,24 @@ end
 [~,zeroIdx]=min(abs(temporalSupport));
 
 % Reshape into a matrix
-X_mat = reshape(X,nSubs*nPSIs,nTimePoints);
-XContra_mat = reshape(XContra,nSubs*nPSIs,nTimePoints);
-XSess_mat = reshape(XSess,2,nSubs*nPSIs,nTimePoints);
-trialX_mat = reshape(trialX,nSubs*nBlinksPerAcq,nTimePoints);
-
+XAll_mat = [reshape(XIpsi,nSubs*nPSIs,nTimePoints); reshape(XContra,nSubs*nPSIs,nTimePoints)];
 
 %% Create a regression matrix
 
 % We will have three covariates
-q=3;
+q=4;
 
 % This is the average response and its first derivative
 components = [];
-components(:,1)=mean(X_mat);
-components(:,2)=[0 diff(mean(X_mat))];
+components(:,1)=mean(XAll_mat);
+components(:,2)=[0 diff(mean(XAll_mat))];
 
 % mean center
 components = components - mean(components);
 
 % Obtain the residual of the X_mat matrix after removing these components.
-for ii=1:size(X_mat,1)
-    y = X_mat(ii,:);
+for ii=1:size(XAll_mat,1)
+    y = XAll_mat(ii,:);
     offset = mean(y);
     y = y - offset;
     y = y - (regress(y',components)'*components');
@@ -141,43 +153,56 @@ for ii=1:size(X_mat,1)
 end
 
 % Reset the random seed to ensure a consistent PCA result
-rng;
+rng default;
 
 % Conduct a PCA to find the most informative third component
 pcaCoeff = pca(X_resid);
-components = [components, -pcaCoeff(:,1)];
+components = [components, -pcaCoeff(:,1), pcaCoeff(:,2)];
 
 % Scale these to have unit excursion and mean center
 components = components - mean(components);
 components = components ./ range(components);
 
-% Conduct the regression and obtain the coefficients
-for ii=1:size(X_mat,1)
+% Conduct the regression and obtain the coefficients.
+for ss=1:nSubs
+    for pp=1:nPSIs
 
-    % Primary analysis of the ipsi response
-    y = X_mat(ii,:);
-    offset = mean(y);
-    y = y - offset;
-    b = regress(y',components)';
-    X_matcoeff(ii,:) = b;
-    X_matfit(ii,:) = b*components' + offset;
-
-    % Secondary analysis of the contra response
-    y = XContra_mat(ii,:);
-    offset = mean(y);
-    y = y - offset;
-    b = regress(y',components)';
-    XContra_matcoeff(ii,:) = b;
-
-    % Coefficients by sesssion (just for ipsi)
-    for ss=1:nSessions
-        y = squeeze(XSess_mat(ss,ii,:))';
+        y = squeeze(XIpsi(ss,pp,:))';
         offset = mean(y);
         y = y - offset;
         b = regress(y',components)';
-        XSess_matcoeff(ss,ii,:) = b;
+        XIpsi_coeff(ss,pp,:) = b;
+        XIpsi_fit(ss,pp,:) = b*components' + offset;
+
+        y = squeeze(XContra(ss,pp,:))';
+        offset = mean(y);
+        y = y - offset;
+        b = regress(y',components)';
+        XContra_coeff(ss,pp,:) = b;
+        XContra_fit(ss,pp,:) = b*components' + offset;
+
+        y = squeeze(XBoth(ss,pp,:))';
+        offset = mean(y);
+        y = y - offset;
+        b = regress(y',components)';
+        XBoth_coeff(ss,pp,:) = b;
+        XBoth_fit(ss,pp,:) = b*components' + offset;
+    
+        % Across bootstraps 
+        boothMat = XBothBoot{ss,pp};
+        for bb=1:nBoots
+            y = squeeze(boothMat(bb,:));
+            offset = mean(y);
+            y = y - offset;
+            b = regress(y',components)';
+            XBoothBoot_coeff(bb,ss,pp,:) = b;
+        end
+
     end
 end
+
+% Reshape
+XAll_fit_mat = [reshape(XIpsi_fit,nSubs*nPSIs,nTimePoints); reshape(XContra_fit,nSubs*nPSIs,nTimePoints)];
 
 % Now do the regression across trials
 for ii=1:nSubs
@@ -189,12 +214,3 @@ for ii=1:nSubs
         trialX_coeff(ii,aa,:) = b;
     end
 end
-
-% Reshape the results
-Xcoeff = reshape(X_matcoeff,nSubs,nPSIs,q);
-XContraCoeff = reshape(XContra_matcoeff,nSubs,nPSIs,q);
-XSessCoeff = reshape(XSess_matcoeff,nSessions,nSubs,nPSIs,q);
-Xfit = reshape(X_matfit,nSubs,nPSIs,nTimePoints);
-
-
-

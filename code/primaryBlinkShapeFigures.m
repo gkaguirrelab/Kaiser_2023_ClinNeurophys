@@ -9,8 +9,8 @@ trialColors = [0:(0.5/7):0.5; 0:(0.5/7):0.5; 1.0:-(0.5/7):0.5]';
 
 
 %% Report the variance explained by the model
-tVar = var(X_mat(:));
-fVar = var(X_matfit(:));
+tVar = var(XAll_mat(:));
+fVar = var(XAll_fit_mat(:));
 fprintf('Proportion variance explained by the model is: %2.2f \n',fVar/tVar);
 
 
@@ -65,7 +65,7 @@ for ss=1:2
     if ss==1
         plot([-100 -100],[0 -100],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
         plot([-100 0],[-125 -125],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
-        t=text(-100,-50,'100 msec');
+        text(-100,-50,'100 msec');
         t=text(-175,-100,'100 pixels');
         t.Rotation = 90;
     end
@@ -76,8 +76,8 @@ saveas(gcf,fullfile(plotSaveDir,'acquisitionOrder.pdf'));
 %% Average blink response by puff pressure
 figure
 set(gcf, 'Position',  [100, 100, 600, 200])
-tmpX = squeeze(mean(X,1));
-tmpXfit = squeeze(mean(Xfit,1));
+tmpX = squeeze(mean(XBoth,1));
+tmpXfit = squeeze(mean(XBoth_fit,1));
 tmpXfit = tmpXfit - tmpXfit(:,1);
 for pp = 1:nPSIs
     subplot(1,2,1)
@@ -85,6 +85,8 @@ for pp = 1:nPSIs
     hold on
     subplot(1,2,2)
     plot(temporalSupport,tmpXfit(pp,:),'-','Color',psiColors(pp,:),'LineWidth',1.5)
+    ylim([-1 0.05]);
+    box off
     hold on
 end
 for mm=1:2
@@ -94,6 +96,8 @@ for mm=1:2
     plot([-100 0],[-1 -1],'-','Color',[0.5 0.5 0.5],'LineWidth',2)
     xlabel('time [msecs]');
     ylabel('blink [proportion]');
+    ylim([-1 0.05]);
+    box off
 end
 saveas(gcf,fullfile(plotSaveDir,'averageBlnkResponseByPSI.pdf'));
 
@@ -132,12 +136,12 @@ velocityFactor = mean(diff(tPoint))/deltaVelocityComponent;
 
 % Time to plot
 figure
-set(gcf, 'Position',  [100, 100, 200, 600])
-meanCoeff = squeeze(mean(Xcoeff,1));
-semCoeff = squeeze(std(Xcoeff,1))./sqrt(nSubs);
+set(gcf, 'Position',  [100, 100, 840, 420])
+meanCoeff = squeeze(mean(XBoth_coeff,1));
+semCoeff = squeeze(std(XBoth_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:3
-    subplot(3,1,plotOrder(cc))
+    subplot(1,3,plotOrder(cc))
     for pp = 1:nPSIs
         plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
         hold on
@@ -148,6 +152,7 @@ for cc=1:3
     xticklabels(arrayfun(@num2str, targetPSISet, 'UniformOutput', 0));
     xlabel('stimulus intensity [log PSI]')
     title(componentNames{cc})
+    axis square
     box off
     switch cc
         case 1
@@ -173,22 +178,20 @@ saveas(gcf,fullfile(plotSaveDir,'coefficientsByPSI.pdf'));
 
 % Define an increasing weibull CDF with 4 parameters. Assume that there is
 % a zero amplitude response at some zero stimulus.
-figure
-set(gcf, 'Position',  [100, 100, 200, 800])
 xShift = log10(0.01);
 x = log10(targetPSISet)-xShift;
 deltaX = x(2)-x(1);
 xFit = linspace(xShift,log10(100),1000)-xShift;
 deltaXFit = xFit(2)-xFit(1);
-lb = [0 1 2 5];
-ub = [0 1 5 15];
-p0 = [0 1 2.5 6];
+lb = [0 1 1.5 2];
+ub = [0 1 3.5 15];
+p0 = [0 1 3 6];
 weibullCDF = @(x,p) p(1) + p(2) - p(2)*exp( - (x./p(3)).^p(4) ) ;
 options = optimoptions('fmincon','Display','off');
 for ii=1:nSubs
 
     % Ipsilateral response
-    y = Xcoeff(ii,:,1);
+    y = XIpsi_coeff(ii,:,1);
     y = y ./ max(y);
     if y(nPSIs-1)>y(nPSIs)
         weights = [ones(1,nPSIs-1) 0.5];
@@ -196,14 +199,14 @@ for ii=1:nSubs
         weights = ones(1,nPSIs);
     end
     myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-    p(ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
-    yFit = weibullCDF(xFit,p(ii,:));
+    pIpsi(ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+    yFit = weibullCDF(xFit,pIpsi(ii,:));
     [~,idx] = min(abs(yFit-0.5));
-    x50(ii) = 10^(xFit(idx)+xShift);
-    slopeAt50(ii) = max(diff(yFit))/deltaXFit;
+    x50Ipsi(ii) = 10^(xFit(idx)+xShift);
+    maxSlopeIpsi(ii) = max(diff(yFit))/deltaXFit;
 
     % Contralateral response
-    y = XContraCoeff(ii,:,1);
+    y = XContra_coeff(ii,:,1);
     y = y ./ max(y);
     if y(nPSIs-1)>y(nPSIs)
         weights = [ones(1,nPSIs-1) 0.5];
@@ -215,37 +218,42 @@ for ii=1:nSubs
     yFit = weibullCDF(xFit,pContra(ii,:));
     [~,idx] = min(abs(yFit-0.5));
     x50Contra(ii) = 10^(xFit(idx)+xShift);
-    slopeAt50Contra(ii) = max(diff(yFit))/deltaXFit;
+    maxSlopeContra(ii) = max(diff(yFit))/deltaXFit;
 
-    % Now fit by session
-    for tt=1:nSessions
-
-        y = squeeze(XSessCoeff(tt,ii,:,1))';
+    % Now across acquisition bootstraps
+    for bb=1:nBoots
+        y = squeeze(XBoothBoot_coeff(bb,ii,:,1))';
         y = y ./ max(y);
         if y(nPSIs-1)>y(nPSIs)
             weights = [ones(1,nPSIs-1) 0.5];
         else
             weights = ones(1,nPSIs);
         end
-
         myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-        pSess(tt,ii,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
-        yFit = weibullCDF(xFit,squeeze(pSess(tt,ii,:))');
+        pBoot = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+        yFit = weibullCDF(xFit,pBoot);
         [~,idx] = min(abs(yFit-0.5));
-        x50Sess(tt,ii) = 10^(xFit(idx)+xShift);
-        slopeAt50Sess(tt,ii) = max(diff(yFit))/deltaXFit;
-
+        x50Boot(bb,ii) = 10^(xFit(idx)+xShift);
+        maxSlopeBoot(bb,ii) = max(diff(yFit))/deltaXFit;
     end
 
 end
 
+% Get the mean params across bootstraps
+for ii=1:nSubs
+    x50Both(ii) = mean(x50Boot(:,ii));
+    maxBoth(ii) = mean(maxSlopeBoot(:,ii));
+end
+
 % Plot the subject fits in order of sensitivity
-[~,sortOrder]=sort(x50,'descend');
+figure
+set(gcf, 'Position',  [100, 100, 200, 800])
+[~,sortOrder]=sort(x50Both,'descend');
 for ss=1:nSubs
     ii = sortOrder(ss);
-    y=Xcoeff(ii,:,1);
+    y = XBoth_coeff(ii,:,1);
     y = y ./ max(y);
-    yFit = weibullCDF(xFit,p(ii,:));
+    yFit = weibullCDF(xFit,pIpsi(ii,:));
     subplot(9,2,ss)
     plot(xFit+xShift,yFit,'-r');
     hold on;
@@ -269,14 +277,13 @@ end
 saveas(gcf,fullfile(plotSaveDir,'weibullFitToAmplitude.pdf'));
 
 
-
 %% Illustrate individual differences in amplitude parameters
 figure
 subIdxToShow = [sortOrder(2),sortOrder(end-1)];
 for ss=1:length(subIdxToShow)
     subplot(1,2,ss);
     for pp=1:nPSIs
-        plot(temporalSupport, squeeze(X( subIdxToShow(ss), pp, :)), 'Color', psiColors(pp,:),'LineWidth',1);
+        plot(temporalSupport, squeeze(XBoth( subIdxToShow(ss), pp, :)), 'Color', psiColors(pp,:),'LineWidth',1);
         hold on
     end
     ylim([-1.1 0.2]);
@@ -285,40 +292,23 @@ end
 saveas(gcf,fullfile(plotSaveDir,'blinkResponseSubjectExtremeX50.pdf'));
 
 
-%% Scatter plot of test / retest of x50 on amplitude
+%% Scatter plot of x50 vs max slope of Weibull fit params
+P = 0.67; % This is ±1SEM
 figure
-for pp=1:2
-    subplot(1,2,pp)
-    switch pp
-        case 1
-            vals = log10(x50Sess);
-        case 2
-            vals = slopeAt50Sess;
-    end
-    scatter(vals(1,:),vals(2,:),100,'r');
-    [Rval,Pval] = corrcoef(vals(1,:),vals(2,:));
-    titleStr = sprintf('corr param r=%2.2f, p=%2.5f',Rval(2),Pval(2));
-    title(titleStr);
-    axis square; box off
-    switch pp
-        case 1
-            xlabel('S1 half-response stimulus [PSI]');
-            ylabel('S2 half-response stimulus [PSI]');
-            a=gca;
-            xlim([0 1.7]);
-            ylim([0 1.7]);
-            axis square
-            a.XTick = log10([1 5 10 50]);
-            a.YTick = log10([1 5 10 50]);
-            a.XTickLabel = {'1','5','10','50'};
-            a.YTickLabel = {'1','5','10','50'};
-        case 2
-            xlabel({'S1 max slope','[proportion / log PSI]'});
-            ylabel({'S2 max slope','[proportion / log PSI]'});
-    end
-    refline(1,0);
+scatter(log10(x50Both),maxSlopeBoth,100,'.r');
+hold on
+for ii=1:nSubs
+    plotBivariateEllipse(log10(squeeze(x50Boot(:,ii))),squeeze(maxSlopeBoot(:,ii)),P)
 end
-saveas(gcf,fullfile(plotSaveDir,'testRetestCoefficients.pdf'));
+axis square; box off
+ylim([0 1.5]);
+xlabel('Half-response threshold [PSI]');
+xlim([-1 1.5]);
+a=gca;
+a.XTick = log10([0.1 1 10]);
+a.XTickLabel = {'0.1','1','10'};
+ylabel({'max slope','[proportion / log PSI]'});
+saveas(gcf,fullfile(plotSaveDir,'WeibullParamSubjectScatter.pdf'));
 
 
 %% Illustration of ipsi vs. contra sensitivity
@@ -332,11 +322,11 @@ subplot(1,3,1)
 for cc = 1:2
     switch cc
         case 1
-            y = squeeze(mean(Xcoeff(:,:,1),1));
-            ySEM = squeeze(std(Xcoeff,1))./sqrt(nSubs);
+            y = squeeze(mean(XIpsi_coeff(:,:,1),1));
+            ySEM = squeeze(std(XIpsi_coeff,1))./sqrt(nSubs);
         case 2
-            y = squeeze(mean(XContraCoeff(:,:,1),1));
-            ySEM = squeeze(std(XContraCoeff,1))./sqrt(nSubs);
+            y = squeeze(mean(XContra_coeff(:,:,1),1));
+            ySEM = squeeze(std(XContra_coeff,1))./sqrt(nSubs);
     end
     y = y./max(y);
     if y(nPSIs-1)>y(nPSIs)
@@ -363,7 +353,7 @@ xlim([0.1 2]);
 axis square
 
 subplot(1,3,2)
-scatter(log10(x50),log10(x50Contra),100,'r');
+scatter(log10(x50Ipsi),log10(x50Contra),100,'r');
 axis square; box off
 xlabel('ipsi half-response stimulus [PSI]');
 ylabel('contra half-response stimulus [PSI]');
@@ -376,39 +366,40 @@ a.YTick = log10([1 5 10 50]);
 a.XTickLabel = {'1','5','10','50'};
 a.YTickLabel = {'1','5','10','50'};
 axis square
+refline
 refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
 subplot(1,3,3)
-scatter(slopeAt50,slopeAt50Contra,100,'r');
+scatter(maxSlopeIpsi,maxSlopeContra,100,'r');
 axis square; box off
 xlabel({'ipsi max slope','[proportion / log PSI]'});
 ylabel({'contra max slope','[proportion / log PSI]'});
 a=gca;
-xlim([0.5 2]);
-ylim([0.5 2]);
+xlim([0.4 2]);
+ylim([0.4 2]);
 axis square
 refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
 % Report the ttest ipsi vs. contra
-[~,Tpval,~,Tstats] = ttest(log10(x50),log10(x50Contra));
-fprintf('T-test ipsi vs. contral x50 vals: means = [%2.1f, %2.1f], t(df)=%2.2f (%d), p=%2.9f \n',...
-    10^mean(log10(x50)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
-[~,Tpval,~,Tstats] = ttest(slopeAt50,slopeAt50Contra);
-fprintf('T-test ipsi vs. contral max slope vals: means = [%2.1f, %2.1f], t(df)=%2.2f (%d), p=%2.9f \n',...
-    mean(slopeAt50),mean(slopeAt50Contra),Tstats.tstat,Tstats.df,Tpval);
+[~,Tpval,~,Tstats] = ttest(log10(x50Ipsi),log10(x50Contra));
+fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+    10^mean(log10(x50Ipsi)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
+[~,Tpval,~,Tstats] = ttest(maxSlopeIpsi,maxSlopeContra);
+fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+    mean(maxSlopeIpsi),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
 
 
 
 %% Plot of the coefficients by trial number
 figure
-set(gcf, 'Position',  [100, 100, 200, 600])
+set(gcf, 'Position',  [100, 100, 840, 420])
 meanCoeff = squeeze(mean(trialX_coeff,1));
 semCoeff = squeeze(std(trialX_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:length(plotOrder)
-    subplot(3,1,plotOrder(cc))
+    subplot(1,3,plotOrder(cc))
     for pp = 1:nBlinksPerAcq
         plot([pp pp],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
         hold on
@@ -447,6 +438,7 @@ for cc=1:length(plotOrder)
     xlabel('trial number')
     title(componentNames{cc})
     box off
+    axis square
 end
 saveas(gcf,fullfile(plotSaveDir,'coefficientsByTrialNumber.pdf'));
 
@@ -476,13 +468,13 @@ for xx = 1:3
     switch xx
         case 1
             % Create uniC, which is permuted to order rows by subject then puff
-            uniC = reshape(permute(X,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            uniC = reshape(permute(XBoth,[2 1 3]),nSubs*nPSIs,nTimePoints);
             titleStr = 'average blinks';
         case 2
-            uniC = reshape(permute(Xfit,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            uniC = reshape(permute(XBoth_fit,[2 1 3]),nSubs*nPSIs,nTimePoints);
             titleStr = 'model fit';
         case 3
-            uniC = reshape(permute(X-Xfit,[2 1 3]),nSubs*nPSIs,nTimePoints);
+            uniC = reshape(permute(XBoth-XBoth_fit,[2 1 3]),nSubs*nPSIs,nTimePoints);
             titleStr = 'residuals';
     end
 

@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,discardFirstTrialFlag,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices, blinkVectorBoots, bootSam] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,discardFirstTrialFlag,discardSquintScansFlag,nBootResamples,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -31,6 +31,16 @@ function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices] = 
     figure
     plot(temporalSupport,blinkVector,'-r')
 %}
+%{
+    % Bootstrap resample across all acquisitions at one PSI
+    targetPSI = 30;
+    subjectID = 15513;
+    discardFirstTrialFlag = true;
+    discardSquintScansFlag = true;
+    nBootResamples = 1000;
+    [blinkVector,temporalSupport,~,~,~,blinkVectorBoots,bootSam] = ...
+        returnBlinkTimeSeries( subjectID, targetPSI, [], 'ipsi', discardFirstTrialFlag, discardSquintScansFlag, nBootResamples );
+%}
 
 
 arguments
@@ -39,6 +49,8 @@ arguments
     sessionID = [];
     ipsiOrContra = 'ipsi';
     discardFirstTrialFlag = false;
+    discardSquintScansFlag = false;
+    nBootResamples (1,1) {mustBeNumeric} = 0;
     minValidIpsiBlinksPerAcq (1,1) {mustBeNumeric} = 0;
     minValidAcq = 0;
     nSamplesBeforeStim = 10;
@@ -51,6 +63,7 @@ nTrials = 0;
 % Initialize vectors for return
 blinkVectorRaw = [];
 trialIndices = [];
+blinkVectorBoots = [];
 
 % Define the location of the i-files
 dataDirPath = fileparts(fileparts(mfilename('fullpath')));
@@ -76,8 +89,10 @@ scanTable = T(ismember(T.subjectID,subjectID),:);
 scanDates = unique(scanTable.scanDate);
 
 % Now cull the table to remove invalid scans
-scanTable = scanTable(ismember(scanTable.notSquint,'TRUE'),:);
-scanTable = scanTable(scanTable.numIpsi>=minValidIpsiBlinksPerAcq,:);
+if discardSquintScansFlag
+    scanTable = scanTable(ismember(scanTable.notSquint,'TRUE'),:);
+    scanTable = scanTable(scanTable.numIpsi>=minValidIpsiBlinksPerAcq,:);
+end
 
 % If we have a targetPSI, filter the table to include just those
 if ~isempty(targetPSI)
@@ -172,6 +187,8 @@ for ii = 1:size(scanTable,1)
                     columnIdx = 3;
                 case 'contra'
                     columnIdx = 4;
+                case 'both'
+                    columnIdx = [3, 4];
             end
         else
             switch ipsiOrContra
@@ -179,6 +196,8 @@ for ii = 1:size(scanTable,1)
                     columnIdx = 4;
                 case 'contra'
                     columnIdx = 3;
+                case 'both'
+                    columnIdx = [3, 4];
             end
         end
 
@@ -186,7 +205,7 @@ for ii = 1:size(scanTable,1)
         temp = table2array(T(max([1 starts(jj)]):ends(jj),columnIdx));
 
         % Add it to the matrix
-        pos(jj,offset:end) = temp';
+        pos(jj,offset:end) = mean(temp,2)';
 
         % Store the trial index
         trialIndices = [trialIndices jj];
@@ -220,6 +239,18 @@ warning(warnState);
 % Get the mean deltaT and assemble the temporal support
 deltaT = round(mean(deltaT),4);
 temporalSupport = -nSamplesBeforeStim*deltaT:deltaT:nSamplesAfterStim*deltaT;
+
+% Conduct a resampling with replacement of the vector if requested. We
+% create an anonymous function for the mean to force action over the first
+% dimension in case there is just one acquisition. We also reset the random
+% seed every time we reach this point so that we use the same bootSam every
+% time, thus linking the resampling across acquisitions and sides (ipsi /
+% contra)
+if nBootResamples>0
+    rng default;
+    meanFunc = @(x) mean(x,1);
+    [blinkVectorBoots, bootSam] = bootstrp(nBootResamples,meanFunc,respByAcq);
+end
 
 % Return the blinkVector
 blinkVector = mean(respByAcq,1);
