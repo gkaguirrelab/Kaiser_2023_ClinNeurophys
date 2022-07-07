@@ -221,6 +221,7 @@ for ii=1:nSubs
     maxSlopeContra(ii) = max(diff(yFit))/deltaXFit;
 
     % Now across acquisition bootstraps
+    pBootTmp = [];
     for bb=1:nBoots
         y = squeeze(XBoothBoot_coeff(bb,ii,:,1))';
         y = y ./ max(y);
@@ -230,38 +231,40 @@ for ii=1:nSubs
             weights = ones(1,nPSIs);
         end
         myObj = @(p) norm((y-weibullCDF(x,p)).*weights);
-        pBoot = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
-        yFit = weibullCDF(xFit,pBoot);
+        pBootTmp(bb,:) = fmincon(myObj,p0,[],[],[],[],lb,ub,[],options);
+        yFit = weibullCDF(xFit,squeeze(pBootTmp(bb,:)));
         [~,idx] = min(abs(yFit-0.5));
-        x50Boot(bb,ii) = 10^(xFit(idx)+xShift);
-        maxSlopeBoot(bb,ii) = max(diff(yFit))/deltaXFit;
+        x50BothBoot(bb,ii) = 10^(xFit(idx)+xShift);
+        maxSlopeBothBoot(bb,ii) = max(diff(yFit))/deltaXFit;
     end
+    pBothBoot(ii,:) = mean(pBootTmp);
 
 end
 
 % Get the mean params across bootstraps
 for ii=1:nSubs
-    x50Both(ii) = mean(x50Boot(:,ii));
-    maxSlopeBoth(ii) = mean(maxSlopeBoot(:,ii));
+    x50Both(ii) = mean(x50BothBoot(:,ii));
+    maxSlopeBoth(ii) = mean(maxSlopeBothBoot(:,ii));
 end
 
 % Plot the subject fits in order of sensitivity
 figure
-set(gcf, 'Position',  [100, 100, 200, 800])
+set(gcf, 'Position',  [100, 100, 750, 450])
 [~,sortOrder]=sort(x50Both,'descend');
 for ss=1:nSubs
     ii = sortOrder(ss);
     y = XBoth_coeff(ii,:,1);
     y = y ./ max(y);
-    yFit = weibullCDF(xFit,pIpsi(ii,:));
-    subplot(9,2,ss)
+    yFit = weibullCDF(xFit,pBothBoot(ii,:));
+    subplot(3,6,ss)
     plot(xFit+xShift,yFit,'-r');
     hold on;
-    plot(x+xShift,y,'ok');
+    plot(x+xShift,y,'.k');
     [~,idx] = min(abs(yFit-0.5));
     plot([xFit(idx)+xShift, xFit(idx)+xShift],[0 0.5],':b')
     plot([xShift, xFit(idx)+xShift],[0.5 0.5],':b')
     box off
+    axis square
     xlim([-1 2.1]);
     ylim([0 1.2]);
     axHandle = gca;
@@ -295,10 +298,14 @@ saveas(gcf,fullfile(plotSaveDir,'blinkResponseSubjectExtremeX50.pdf'));
 %% Scatter plot of x50 vs max slope of Weibull fit params
 P = 0.67; % This is ±1SEM
 figure
+set(gcf, 'Position',  [100, 100, 300, 300])
 scatter(log10(x50Both),maxSlopeBoth,100,'.r');
 hold on
+for ii = 1:length(subIdxToShow)
+    plot(log10(x50Both(subIdxToShow(ii))),maxSlopeBoth(subIdxToShow(ii)),'ok');
+end
 for ii=1:nSubs
-    plotBivariateEllipse(log10(squeeze(x50Boot(:,ii))),squeeze(maxSlopeBoot(:,ii)),P)
+    plotBivariateEllipse(log10(squeeze(x50BothBoot(:,ii))),squeeze(maxSlopeBothBoot(:,ii)),P)
 end
 axis square; box off
 ylim([0 2]);
@@ -307,6 +314,7 @@ xlim([-1 1.5]);
 a=gca;
 a.XTick = log10([0.1 1 10]);
 a.XTickLabel = {'0.1','1','10'};
+a.YTick = 0:0.5:2;
 ylabel({'max slope','[proportion / log PSI]'});
 saveas(gcf,fullfile(plotSaveDir,'WeibullParamSubjectScatter.pdf'));
 
@@ -390,6 +398,29 @@ fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (
 fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
     mean(maxSlopeIpsi),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
 
+
+%% Illustration of slope vs. threshold differences
+figure
+paramsControl = [0    1.0000    2.8    8];
+paramsPatient = {...
+    [0    1.0000    2.5   12],...
+    [0    1.0000    2.8    12],...
+    [0    1.0000    2.5    8],...
+};
+for pp=1:3
+    subplot(1,3,pp)
+    yFit = weibullCDF(xFit,paramsControl);
+    plot(xFit+xShift,yFit,'-k');
+    hold on
+    yFit = weibullCDF(xFit,paramsPatient{pp});
+    plot(xFit+xShift,yFit,'-r');
+    xlim([-0.5 1.5])
+    axis square
+    box off
+    xlabel('log stimulus');
+    ylabel('response');
+end
+saveas(gcf,fullfile(plotSaveDir,'exampleThreshSlopeChanges.pdf'));
 
 
 %% Plot of the coefficients by trial number
