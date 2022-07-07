@@ -317,7 +317,7 @@ a.XTickLabel = {'0.1','1','10'};
 a.YTick = 0:0.5:2;
 ylabel({'max slope','[proportion / log PSI]'});
 saveas(gcf,fullfile(plotSaveDir,'WeibullParamSubjectScatter.pdf'));
-
+fprintf('Correlation across subjects of log(x50) and max slope: r = %2.2f \n',corr(log10(x50Both)',maxSlopeBoth'))
 
 %% Illustration of ipsi vs. contra sensitivity
 faceColors = {'k','none'};
