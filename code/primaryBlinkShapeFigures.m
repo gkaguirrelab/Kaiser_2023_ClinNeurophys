@@ -142,10 +142,16 @@ semCoeff = squeeze(std(XBoth_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:3
     subplot(1,3,plotOrder(cc))
+    meanVal = meanCoeff(:,cc);
+    semVal = semCoeff(:,cc);
+    if cc~=1
+        meanVal = meanVal ./ meanCoeff(:,1);
+        semVal = semVal ./ meanCoeff(:,1);
+    end
     for pp = 1:nPSIs
-        plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
+        plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanVal(pp)+2.*semVal(pp),meanVal(pp)-2.*semVal(pp)],'-k');
         hold on
-        plot(log10(targetPSISet(pp)),meanCoeff(pp,cc),'o',...
+        plot(log10(targetPSISet(pp)),meanVal(pp),'o',...
             'MarkerFaceColor',componentColors(cc,:),'MarkerEdgeColor','none' );
     end
     xticks(log10(targetPSISet));
@@ -157,17 +163,18 @@ for cc=1:3
     switch cc
         case 1
             ylabel('proportion blink');
+            ylim([0 1.2]);
         case 2
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
-            ylim([-coeffVal5msec*1.5 coeffVal5msec*1.75]);
+            ylim([-coeffVal5msec*3 coeffVal5msec*3]);
             axHandle = gca;
-            axHandle.YTick = [-coeffVal5msec 0 coeffVal5msec];
-            axHandle.YTickLabel = {'5','0','-5'};
+            axHandle.YTick = [-coeffVal5msec*2 -coeffVal5msec 0 coeffVal5msec coeffVal5msec*2];
+            axHandle.YTickLabel = {'10','5','0','-5','-10'};
             ylabel('latency shift [msecs]');
         case 3
-            ylim([-0.2 0.2]);
+            ylim([-0.3 0.31]);
             ylabel('arbitrary units');
     end
 end
@@ -390,13 +397,46 @@ axis square
 refline(1,0);
 saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
-% Report the ttest ipsi vs. contra
+% Report the ttest ipsi vs. contra amplitude
 [~,Tpval,~,Tstats] = ttest(log10(x50Ipsi),log10(x50Contra));
 fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
     10^mean(log10(x50Ipsi)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
 [~,Tpval,~,Tstats] = ttest(maxSlopeIpsi,maxSlopeContra);
 fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
     mean(maxSlopeIpsi),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
+
+
+
+%% Plot mean ipsi and contra response
+figure
+vec = squeeze(mean(mean(XIpsi,1),2));
+vec = vec ./ -min(vec);
+plot(temporalSupport,vec,'-k','LineWidth',2);
+hold on
+vec = squeeze(mean(mean(XContra,1),2));
+vec = vec ./ -min(vec);
+plot(temporalSupport,vec,'--k','LineWidth',2);
+xlabel('time [msecs]');
+ylabel('amplitude [normalized]');
+saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraAverageResponse.pdf'));
+
+% Provide a t-test of non-amplitude components between ipsi and contra. We
+% need to scale the coefficients by the amplitude of the blink response
+meanAmpCoeffBySubIpsi = mean(squeeze(XIpsi_coeff(:,:,1)),2);
+meanAmpCoeffBySubContra = mean(squeeze(XIpsi_coeff(:,:,1)),2);
+for cc=2:3
+    meanCoeffBySubIpsi = mean(squeeze(XIpsi_coeff(:,:,cc)),2);
+    meanCoeffBySubIpsi = meanCoeffBySubIpsi./meanAmpCoeffBySubIpsi;
+
+    meanCoeffBySubContra = mean(squeeze(XContra_coeff(:,:,cc)),2);
+    meanCoeffBySubContra = meanCoeffBySubContra./meanAmpCoeffBySubContra;
+
+    [~,pVal,~,stats] = ttest(meanCoeffBySubIpsi,meanCoeffBySubContra);
+
+    fprintf([componentNames{cc} ' ipsi vs. contra, t(%d) = %2.2f, p = %2.1e \n'],stats.df,stats.tstat,pVal);
+end
+
+
 
 
 %% Illustration of slope vs. threshold differences
@@ -423,7 +463,7 @@ end
 saveas(gcf,fullfile(plotSaveDir,'exampleThreshSlopeChanges.pdf'));
 
 
-%% Plot of the coefficients by trial number
+%% Plot of the coefficients by trial number        
 figure
 set(gcf, 'Position',  [100, 100, 840, 420])
 meanCoeff = squeeze(mean(trialX_coeff,1));
@@ -431,8 +471,14 @@ semCoeff = squeeze(std(trialX_coeff,1))./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:length(plotOrder)
     subplot(1,3,plotOrder(cc))
+    meanVal = meanCoeff(:,cc);
+    semVal = semCoeff(:,cc);
+    if cc~=1
+        meanVal = meanVal ./ meanCoeff(:,1);
+        semVal = semVal ./ meanCoeff(:,1);
+    end
     for pp = 1:nBlinksPerAcq
-        plot([pp pp],[meanCoeff(pp,cc)+2.*semCoeff(:,cc),meanCoeff(pp,cc)-2.*semCoeff(:,cc)],'-k');
+        plot([pp pp],[meanVal(pp)+2.*semVal(pp),meanVal(pp)-2.*semVal(pp)],'-k');
         hold on
         plot(pp,meanCoeff(pp,cc),'o',...
             'MarkerFaceColor',componentColors(cc,:),'MarkerEdgeColor','none' );
