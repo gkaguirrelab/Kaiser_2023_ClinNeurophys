@@ -516,8 +516,22 @@ for cc=1:length(plotOrder)
     title(componentNames{cc})
     box off
     axis square
+
+    % Loop through subjects and report the parameters of the exponential
+    % fit
+    for ss=1:nSubs  
+        y = squeeze(trialX_coeff(ss,:,cc));
+        if cc~=1
+            y = y./squeeze(trialX_coeff(ss,:,1));
+        end
+        myObj = @(p) norm(y' - myExpFunc(p,1:nBlinksPerAcq));
+        myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+        tauVals(ss,cc) = myFitP(2);
+        expFitR2Vals(ss,cc) = corr(y',myExpFunc(myFitP,1:nBlinksPerAcq)')^2;
+    end
 end
 saveas(gcf,fullfile(plotSaveDir,'coefficientsByTrialNumber.pdf'));
+
 
 
 %% Plot of the mean response by trial number
@@ -528,6 +542,8 @@ for ii=1:8
     hold on
 end
 saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
+
+
 
 
 %% Illustration of all blink responses and model fit
