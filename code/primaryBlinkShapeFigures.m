@@ -399,10 +399,10 @@ saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
 % Report the ttest ipsi vs. contra amplitude
 [~,Tpval,~,Tstats] = ttest(log10(x50Ipsi),log10(x50Contra));
-fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.3e \n',...
     10^mean(log10(x50Ipsi)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
 [~,Tpval,~,Tstats] = ttest(maxSlopeIpsi,maxSlopeContra);
-fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%3.4f \n',...
     mean(maxSlopeIpsi),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
 
 
@@ -433,7 +433,7 @@ for cc=2:3
 
     [~,pVal,~,stats] = ttest(meanCoeffBySubIpsi,meanCoeffBySubContra);
 
-    fprintf([componentNames{cc} ' ipsi vs. contra, t(%d) = %2.2f, p = %2.1e \n'],stats.df,stats.tstat,pVal);
+    fprintf([componentNames{cc} ' ipsi vs. contra, t(%d) = %2.2f, p = %2.3e \n'],stats.df,stats.tstat,pVal);
 end
 
 
