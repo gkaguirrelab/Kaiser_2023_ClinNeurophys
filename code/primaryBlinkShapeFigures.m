@@ -582,9 +582,9 @@ for cc = 1:length(componentNames)
     if isempty(idx)
         pVal = 1/nPerms;
     else
-    pVal = (nPerms-idx)/nPerms;
+    pVal = (nPerms-idx+1)/nPerms;
     end
-    fprintf(['Exponential model fit to ' componentNames{cc} ' p = %2.3f (permuted trial order)\n'],pVal);
+    fprintf(['Exponential model fit to ' componentNames{cc} ' p = %2.6f (permuted trial order)\n'],pVal);
 end
 
 %% Plot of the mean response by trial number
