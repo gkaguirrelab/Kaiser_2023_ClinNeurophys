@@ -138,19 +138,26 @@ velocityFactor = mean(diff(tPoint))/deltaVelocityComponent;
 figure
 set(gcf, 'Position',  [100, 100, 840, 420])
 meanCoeff = squeeze(mean(XBoth_coeff,1));
-semCoeff = squeeze(std(XBoth_coeff,1))./sqrt(nSubs);
+sdCoeff = squeeze(std(XBoth_coeff,1));
+semCoeff = sdCoeff./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:3
     subplot(1,3,plotOrder(cc))
     meanVal = meanCoeff(:,cc);
+    sdVal = sdCoeff(:,cc);
     semVal = semCoeff(:,cc);
     if cc~=1
         meanVal = meanVal ./ meanCoeff(:,1);
+        sdVal = sdVal ./ meanCoeff(:,1);
         semVal = semVal ./ meanCoeff(:,1);
     end
+    x_vector = [log10(targetPSISet)'; fliplr(log10(targetPSISet))'];
+    patch = fill(x_vector, [meanVal+sdVal;flip(meanVal-sdVal)], componentColors(cc,:));
+    set(patch, 'edgecolor', 'none');
+    set(patch, 'FaceAlpha', 0.1);
+    hold on
     for pp = 1:nPSIs
         plot([log10(targetPSISet(pp)) log10(targetPSISet(pp))],[meanVal(pp)+2.*semVal(pp),meanVal(pp)-2.*semVal(pp)],'-k');
-        hold on
         plot(log10(targetPSISet(pp)),meanVal(pp),'o',...
             'MarkerFaceColor',componentColors(cc,:),'MarkerEdgeColor','none' );
     end
@@ -168,13 +175,13 @@ for cc=1:3
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
-            ylim([-coeffVal5msec*3 coeffVal5msec*3]);
+            ylim([-coeffVal5msec*4 coeffVal5msec*4]);
             axHandle = gca;
-            axHandle.YTick = [-coeffVal5msec*2 -coeffVal5msec 0 coeffVal5msec coeffVal5msec*2];
-            axHandle.YTickLabel = {'10','5','0','-5','-10'};
+            axHandle.YTick = [-coeffVal5msec*3 -coeffVal5msec*2 -coeffVal5msec 0 coeffVal5msec coeffVal5msec*2 coeffVal5msec*3];
+            axHandle.YTickLabel = {'15','10','5','0','-5','-10',-15'};
             ylabel('latency shift [msecs]');
         case 3
-            ylim([-0.3 0.31]);
+            ylim([-0.6 0.6]);
             ylabel('arbitrary units');
     end
 end
@@ -399,10 +406,10 @@ saveas(gcf,fullfile(plotSaveDir,'ipsiVsContraSensitivity.pdf'));
 
 % Report the ttest ipsi vs. contra amplitude
 [~,Tpval,~,Tstats] = ttest(log10(x50Ipsi),log10(x50Contra));
-fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+fprintf('T-test ipsi vs. contral x50 vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.3e \n',...
     10^mean(log10(x50Ipsi)),10^mean(log10(x50Contra)),Tstats.tstat,Tstats.df,Tpval);
 [~,Tpval,~,Tstats] = ttest(maxSlopeIpsi,maxSlopeContra);
-fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%2.9f \n',...
+fprintf('T-test ipsi vs. contral max slope vals: means = [%2.2f, %2.2f], t(df)=%2.2f (%d), p=%3.4f \n',...
     mean(maxSlopeIpsi),mean(maxSlopeContra),Tstats.tstat,Tstats.df,Tpval);
 
 
@@ -433,7 +440,7 @@ for cc=2:3
 
     [~,pVal,~,stats] = ttest(meanCoeffBySubIpsi,meanCoeffBySubContra);
 
-    fprintf([componentNames{cc} ' ipsi vs. contra, t(%d) = %2.2f, p = %2.1e \n'],stats.df,stats.tstat,pVal);
+    fprintf([componentNames{cc} ' ipsi vs. contra, t(%d) = %2.2f, p = %2.3e \n'],stats.df,stats.tstat,pVal);
 end
 
 
@@ -467,16 +474,24 @@ saveas(gcf,fullfile(plotSaveDir,'exampleThreshSlopeChanges.pdf'));
 figure
 set(gcf, 'Position',  [100, 100, 840, 420])
 meanCoeff = squeeze(mean(trialX_coeff,1));
-semCoeff = squeeze(std(trialX_coeff,1))./sqrt(nSubs);
+sdCoeff = squeeze(std(trialX_coeff,1));
+semCoeff = sdCoeff./sqrt(nSubs);
 plotOrder = [1 2 3];
 for cc=1:length(plotOrder)
     subplot(1,3,plotOrder(cc))
     meanVal = meanCoeff(:,cc);
+    sdVal = sdCoeff(:,cc);
     semVal = semCoeff(:,cc);
     if cc~=1
         meanVal = meanVal ./ meanCoeff(:,1);
+        sdVal = sdVal ./ meanCoeff(:,1);
         semVal = semVal ./ meanCoeff(:,1);
     end
+    x_vector = [1:nBlinksPerAcq, nBlinksPerAcq:-1:1];
+    patch = fill(x_vector, [(meanVal+sdVal)',(flipud(meanVal-sdVal))'], componentColors(cc,:));
+    set(patch, 'edgecolor', 'none');
+    set(patch, 'FaceAlpha', 0.1);
+    hold on
     for pp = 1:nBlinksPerAcq
         plot([pp pp],[meanVal(pp)+2.*semVal(pp),meanVal(pp)-2.*semVal(pp)],'-k');
         hold on
@@ -498,27 +513,79 @@ for cc=1:length(plotOrder)
             % Convert the coefficient values to units of msecs. A
             % coefficient value equivalent to a 5 msec latency shift is
             coeffVal5msec = -5/velocityFactor;
-            ylim([-coeffVal5msec*1.5 coeffVal5msec*1.5]);
+            ylim([-coeffVal5msec*2.5 coeffVal5msec*2.5]);
             axHandle = gca;
-            axHandle.YTick = [-coeffVal5msec 0 coeffVal5msec];
-            axHandle.YTickLabel = {'5','0','-5'};
+            axHandle.YTick = [-coeffVal5msec*2 -coeffVal5msec 0 coeffVal5msec coeffVal5msec*2];
+            axHandle.YTickLabel = {'10','5','0','-5','-10'};
             ylabel('latency shift [msecs]');
         case 3
             myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
             myObj = @(p) norm(meanCoeff(:,3)' - myExpFunc(p,1:nBlinksPerAcq));
             myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
             plot(1:0.1:nBlinksPerAcq,myExpFunc(myFitP,1:0.1:nBlinksPerAcq),'-r')
-            ylim([-0.2 0.2]);
+            ylim([-0.5 0.5]);
             ylabel('arbitrary units');
     end
-    xticks(1:8);
+    xticks(1:nBlinksPerAcq);
     xlabel('trial number')
     title(componentNames{cc})
     box off
     axis square
+
+    % Loop through subjects and report the parameters of the exponential
+    % fit
+    for ss=1:nSubs  
+        y = squeeze(trialX_coeff(ss,:,cc));
+        if cc~=1
+            y = y./squeeze(trialX_coeff(ss,:,1));
+        end
+        myObj = @(p) norm(y' - myExpFunc(p,1:nBlinksPerAcq));
+        myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+        tauVals(ss,cc) = myFitP(2);
+        expFitR2Vals(ss,cc) = corr(y',myExpFunc(myFitP,1:nBlinksPerAcq)')^2;
+    end
 end
 saveas(gcf,fullfile(plotSaveDir,'coefficientsByTrialNumber.pdf'));
 
+% Conduct a permutation test to assess the significance of the exponential
+% model fit
+P=perms(1:nBlinksPerAcq);
+P=P(randperm(size(P,1)),:);
+nPerms = 10000;
+for pp = 1:nPerms+1
+    if pp == nPerms+1
+        % Put the veridical order in the last element
+        trialX_coeff_perm = trialX_coeff;
+    else
+        trialX_coeff_perm = trialX_coeff(:,P(pp,:),:);
+    end
+    meanCoeff = squeeze(mean(trialX_coeff_perm,1));
+    for cc = 1:length(componentNames)
+        switch cc
+            case 1
+                myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+            case 2
+                myExpFunc = @(p,x) p(3) - p(1).*exp(-( x./p(2) ));
+            case 3
+                myExpFunc = @(p,x) p(1).*exp(-( x./p(2) )) + p(3);
+        end
+        y = meanCoeff(:,cc)';
+        myObj = @(p) norm(y - myExpFunc(p,1:nBlinksPerAcq));
+        myFitP = fmincon(myObj,[1 1 1],[],[],[],[],[],[],[],options);
+        permR2(pp,cc) = corr(y',myExpFunc(myFitP,1:nBlinksPerAcq)')^2;
+    end
+end
+veridicalVals = permR2(end,:);
+permR2 = sort(permR2(1:nPerms,:));
+for cc = 1:length(componentNames)
+    idx = find(squeeze(permR2(:,cc))>veridicalVals(cc),1);
+    if isempty(idx)
+        pVal = 1/nPerms;
+    else
+    pVal = (nPerms-idx+1)/nPerms;
+    end
+    fprintf(['Exponential model fit to ' componentNames{cc} ' p = %2.6f (permuted trial order)\n'],pVal);
+end
 
 %% Plot of the mean response by trial number
 figure
@@ -528,6 +595,8 @@ for ii=1:8
     hold on
 end
 saveas(gcf,fullfile(plotSaveDir,'meanResponseByTrialNumber.pdf'));
+
+
 
 
 %% Illustration of all blink responses and model fit
