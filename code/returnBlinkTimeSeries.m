@@ -72,12 +72,15 @@ dataDirPath = fileparts(fileparts(mfilename('fullpath')));
 % determine if a given trial is valid
 spreadsheet ='UPENN Summary with IPSI Responses_02072022_SquintCheck.csv';
 
+% Define the sub-directory in which these data live
+dataSubdir = 'Kaiser2023_17PatientTrial';
+
 % Turn off a warning during readtable
 warnState = warning();
 warning('off','MATLAB:table:ModifiedAndSavedVarnames');
 
 % Read the table
-T = readtable(fullfile(dataDirPath,'data',spreadsheet));
+T = readtable(fullfile(dataDirPath,'data',dataSubdir,spreadsheet));
 
 % Restore the warning state
 warning(warnState);
@@ -140,7 +143,7 @@ for ii = 1:size(scanTable,1)
     % the file. So, we find the matching scanID file, and check to make
     % sure it is the only match
     iFileName = ['l-file_' num2str(scanTable.subjectID(ii)) '_' num2str(scanTable.scanID(ii)) '_' '*' '.csv'];
-    fullFilePath = fullfile(dataDirPath,'data','iFiles',num2str(subjectID),iFileName);
+    fullFilePath = fullfile(dataDirPath,'data',dataSubdir,'iFiles',num2str(subjectID),iFileName);
     fileList = dir(fullFilePath);
     if length(fileList)>1
         error('Too many files');

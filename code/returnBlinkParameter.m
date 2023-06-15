@@ -57,12 +57,15 @@ dataDirPath = fileparts(fileparts(mfilename('fullpath')));
 % determine if a given trial is valid
 spreadsheet ='UPENN Summary with IPSI Responses_02072022_SquintCheck.csv';
 
+% Define the sub-directory in which these data live
+dataSubdir = 'Kaiser2023_17PatientTrial';
+
 % Turn off a warning during readtable
 warnState = warning();
 warning('off','MATLAB:table:ModifiedAndSavedVarnames');
 
 % Read the table
-T = readtable(fullfile(dataDirPath,'data',spreadsheet));
+T = readtable(fullfile(dataDirPath,'data',dataSubdir,spreadsheet));
 
 % Restore the warning state
 warning(warnState);
