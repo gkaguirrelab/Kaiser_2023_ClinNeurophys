@@ -44,7 +44,7 @@ dropboxBaseDir = ...
 % Path to paper directory
 switch userName
     case 'aguirre'
-        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/Kaiser_2022_psychometricBlink/Figures/matlabFigures');
+        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/xCompleted/2023/Kaiser_2023_psychometricBlink/Figures/matlabFigures');
     otherwise
         plotSaveDir = '';
 end

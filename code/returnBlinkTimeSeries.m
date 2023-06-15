@@ -1,4 +1,4 @@
-function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices, blinkVectorBoots, bootSam] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,discardFirstTrialFlag,discardSquintScansFlag,nBootResamples,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim )
+function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices, blinkVectorBoots, bootSam] = returnBlinkTimeSeries( subjectID,targetPSI,sessionID,ipsiOrContra,discardFirstTrialFlag,discardSquintScansFlag,nBootResamples,minValidIpsiBlinksPerAcq,minValidAcq,nSamplesBeforeStim,nSamplesAfterStim,deltaT )
 % Loads I-Files and conducts an analysis of time series data
 %
 % Syntax:
@@ -6,6 +6,10 @@ function [blinkVector,temporalSupport, nTrials, blinkVectorRaw, trialIndices, bl
 %
 % Description:
 %   Briana: Describe how the iFiles are structured and how we load them
+%
+%   The videos are recorded with a 300 Hz camera, implying a deltaT of 3.33
+%   msecs. This is supported by observing that the first 31 observations
+%   correspond to 0-100 msecs, thus 100 msecs / 30 intervals = 3.33 msecs.
 %
 % Inputs:
 %   subjectID             - Scalar. 5 digit integer that identifies the
@@ -55,6 +59,7 @@ arguments
     minValidAcq = 0;
     nSamplesBeforeStim = 10;
     nSamplesAfterStim = 150;
+    deltaT = 3.333;
 end
 
 % Set a counter to return
@@ -154,10 +159,6 @@ for ii = 1:size(scanTable,1)
     % Load the iFile into a table
     T = readtable(fullFilePath);
 
-    % Get the deltaT for this measure
-    timeVarName = T.Properties.VariableNames{1};
-    deltaT(ii) = mean(diff(T.(timeVarName)));
-
     % find stimulus arrivals
     stimVarName = T.Properties.VariableNames{2};
     rights = find(strcmp('MC-OD',T.(stimVarName)(:,1)));
@@ -240,7 +241,6 @@ end
 warning(warnState);
 
 % Get the mean deltaT and assemble the temporal support
-deltaT = round(mean(deltaT),4);
 temporalSupport = -nSamplesBeforeStim*deltaT:deltaT:nSamplesAfterStim*deltaT;
 
 % Conduct a resampling with replacement of the vector if requested. We

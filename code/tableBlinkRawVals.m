@@ -72,7 +72,7 @@ for ss = 1:nLevels
     v(2) = -bootAmpByLevel(ss); v(3) = bootAmpByLevelSEM(ss);
     v(4) = bootLatencyByLevel(ss); v(5) = bootLatencyByLevelSEM(ss);
     v(6) = bootFWHMByLevel(ss); v(7) = bootFWHMByLevelSEM(ss);
-    str = sprintf('%2.1f\t%2.1f ± %2.1f\t%2.1f ± %2.1f\t%2.1f ± %2.1f\n',v);
+    str = sprintf('%2.1f\t%2.2f ± %2.1f\t%2.1f ± %2.1f\t%2.1f ± %2.1f\n',v);
     fprintf(str);
 end
 

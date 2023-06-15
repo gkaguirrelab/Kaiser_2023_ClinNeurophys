@@ -1,4 +1,4 @@
-%% primaryBlinkShapeAnalysis
+%% primaryBlinkPCAnalysis
 % This routine conducts an analysis upon the time-series measurements of
 % lid position evoked by air puffs, and as measured using the BlinkTBI
 % device. Each of 17 subjects were studied in two separate sessions. Each
