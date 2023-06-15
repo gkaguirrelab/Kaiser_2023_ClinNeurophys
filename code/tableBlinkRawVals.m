@@ -1,5 +1,5 @@
-%% primaryBlinkShapeRawVals
-% Run after primaryBlinkShapeAnalysis.m
+%% tableBlinkRawVals
+% Run after primaryBlinkPCnalysis.m
 % This routine derives a set of summary measures of the blink response by
 % refernce to the "raw" blink response time series. This was added to
 % satisfy reviewers who wished to have an account of the data that had not
