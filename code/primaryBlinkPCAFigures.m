@@ -1,5 +1,9 @@
-%% primaryBlinkShapeFigures
+%% primaryBlinkPCAFigures
 % Run after primaryBlinkShapeAnalysis.m
+
+if exist('XAll_fit_mat','var')~=1
+    error('First run primaryBlinkPCAnalysis to generate the analysis variables')
+end
 
 % Define a gray-to-red color set for puff-pressure
 psiColors = [0.5:0.125:1.0; 0.5:-0.125:0; 0.5:-0.125:0]';
@@ -104,17 +108,34 @@ saveas(gcf,fullfile(plotSaveDir,'averageBlnkResponseByPSI.pdf'));
 
 %% Illustration of the model components
 figure
+set(gcf, 'Position',  [100, 100, 300, 600])
 componentNames = {'amplitude','velocity','shape'};
 componentColors = [0 0 0; 0 0 1; 0.65 0.65 0.65];
-componentWidths = [1.5, 1.5, 1];
+componentWidths = [2, 2, 2];
 plotOrder = [1 2 3];
+subplot(2,1,1)
 for cc = plotOrder
     plot(temporalSupport,components(:,cc)-components(1,cc),'-','Color',componentColors(cc,:),'LineWidth',componentWidths(cc))
     hold on
 end
 legend(componentNames(plotOrder))
+ylim([-1.1 0.5]);
+    xlim([-50 500]);
 xlabel('time [msecs]');
 ylabel('component value');
+
+subplot(2,1,2)
+exampleSub = 11; exampleStim = 5;
+exampleCoeff = squeeze(XBoth_coeff(exampleSub,exampleStim,:));
+
+plot(temporalSupport,squeeze(XBoth(exampleSub,exampleStim,:)),'.','Color',[0.5 0.5 0.5]);
+hold on
+plot(temporalSupport,squeeze(XBoth_fit(exampleSub,exampleStim,:)),'-r','LineWidth',1)
+ylim([-1.1 0.5]);
+    xlim([-50 500]);
+legend({'fit','data'});
+title(sprintf('coeff = [%2.2f, %2.2f, %2.2f ]',exampleCoeff))
+
 saveas(gcf,fullfile(plotSaveDir,'ModelComponents.pdf'));
 
 
