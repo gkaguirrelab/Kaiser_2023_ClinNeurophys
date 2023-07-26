@@ -3,15 +3,15 @@
 	"flavor": "",
 	"hook": "",
 	"importance": "",
-	"localHookTemplate": "config/blinkCNSAnalysisLocalHookTemplate.m",
+	"localHookTemplate": "config/Kaiser_2023_ClinNeurophysLocalHookTemplate.m",
 	"printLocalHookOutput": "1",
-	"name": "blinkCNSAnalysis",
+	"name": "Kaiser_2023_ClinNeurophys",
 	"pathPlacement": "append",
 	"subfolder": "code",
 	"toolboxRoot": "",
 	"type": "git",
 	"update": "",
-	"url": "https://github.com/gkaguirrelab/blinkCNSAnalysis.git"
+	"url": "https://github.com/gkaguirrelab/Kaiser_2023_ClinNeurophys.git"
 	}
 ]
 

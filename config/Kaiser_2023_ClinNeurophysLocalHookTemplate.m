@@ -1,22 +1,22 @@
-function blinkCNSAnalysisLocalHook
-%  blinkCNSAnalysisLocalHook
+function Kaiser_2023_ClinNeurophysLocalHook
+%  Kaiser_2023_ClinNeurophysLocalHook
 %
 % For use with the ToolboxToolbox.
 %
 % As part of the setup process, ToolboxToolbox will copy this file to your
 % ToolboxToolbox localToolboxHooks directory (minus the "Template" suffix).
 % The defalt location for this would be
-%   ~/localToolboxHooks/blinkCNSAnalysisLocalHook.m
+%   ~/localToolboxHooks/Kaiser_2023_ClinNeurophysLocalHook.m
 %
-% Each time you run tbUseProject('blinkCNSAnalysis'), ToolboxToolbox will
-% execute your local copy of this file to do setup for blinkCNSAnalysis.
+% Each time you run tbUseProject('Kaiser_2023_ClinNeurophys'), ToolboxToolbox will
+% execute your local copy of this file to do setup for Kaiser_2023_ClinNeurophys.
 %
 % You should edit your local copy with values that are correct for your
 % local machine, for example the output directory location.
 %
 
 
-projectName = 'blinkCNSAnalysis';
+projectName = 'Kaiser_2023_ClinNeurophys';
 
 %% Delete any old prefs
 if (ispref(projectName))
