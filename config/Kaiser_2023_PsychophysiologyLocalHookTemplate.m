@@ -1,22 +1,22 @@
-function Kaiser_2023_ClinNeurophysLocalHook
-%  Kaiser_2023_ClinNeurophysLocalHook
+function Kaiser_2023_PsychophysiologyLocalHook
+%  Kaiser_2023_PsychophysiologyLocalHook
 %
 % For use with the ToolboxToolbox.
 %
 % As part of the setup process, ToolboxToolbox will copy this file to your
 % ToolboxToolbox localToolboxHooks directory (minus the "Template" suffix).
 % The defalt location for this would be
-%   ~/localToolboxHooks/Kaiser_2023_ClinNeurophysLocalHook.m
+%   ~/localToolboxHooks/Kaiser_2023_PsychophysiologyLocalHook.m
 %
-% Each time you run tbUseProject('Kaiser_2023_ClinNeurophys'), ToolboxToolbox will
-% execute your local copy of this file to do setup for Kaiser_2023_ClinNeurophys.
+% Each time you run tbUseProject('Kaiser_2023_Psychophysiology'), ToolboxToolbox will
+% execute your local copy of this file to do setup for Kaiser_2023_Psychophysiology.
 %
 % You should edit your local copy with values that are correct for your
 % local machine, for example the output directory location.
 %
 
 
-projectName = 'Kaiser_2023_ClinNeurophys';
+projectName = 'Kaiser_2023_Psychophysiology';
 
 %% Delete any old prefs
 if (ispref(projectName))

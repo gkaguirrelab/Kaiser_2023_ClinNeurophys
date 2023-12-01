@@ -36,7 +36,7 @@ discardSquintScansFlag = false;
 nBoots = 1000;
 
 % Get the location to save plots
-plotSaveDir = getpref('blinkCNSAnalysis','plotSaveDir');
+plotSaveDir = getpref('Kaiser_2023_Psychophysiology','plotSaveDir');
 
 % List of subject IDs
 subjectIDs = {15512, 15507, 15506, 15505, 14596, 14595, 14594, 14593, 14592, 14591, ...

@@ -1,0 +1,17 @@
+[
+	{
+	"flavor": "",
+	"hook": "",
+	"importance": "",
+	"localHookTemplate": "config/Kaiser_2023_PsychophysiologyLocalHookTemplate.m",
+	"printLocalHookOutput": "1",
+	"name": "Kaiser_2023_Psychophysiology",
+	"pathPlacement": "append",
+	"subfolder": "code",
+	"toolboxRoot": "",
+	"type": "git",
+	"update": "",
+	"url": "https://github.com/gkaguirrelab/Kaiser_2023_Psychophysiology.git"
+	}
+]
+
