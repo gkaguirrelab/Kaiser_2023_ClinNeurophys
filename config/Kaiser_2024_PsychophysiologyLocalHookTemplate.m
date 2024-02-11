@@ -1,22 +1,22 @@
-function Kaiser_2023_PsychophysiologyLocalHook
-%  Kaiser_2023_PsychophysiologyLocalHook
+function Kaiser_2024_PsychophysiologyLocalHook
+%  Kaiser_2024_PsychophysiologyLocalHook
 %
 % For use with the ToolboxToolbox.
 %
 % As part of the setup process, ToolboxToolbox will copy this file to your
 % ToolboxToolbox localToolboxHooks directory (minus the "Template" suffix).
 % The defalt location for this would be
-%   ~/localToolboxHooks/Kaiser_2023_PsychophysiologyLocalHook.m
+%   ~/localToolboxHooks/Kaiser_2024_PsychophysiologyLocalHook.m
 %
-% Each time you run tbUseProject('Kaiser_2023_Psychophysiology'), ToolboxToolbox will
-% execute your local copy of this file to do setup for Kaiser_2023_Psychophysiology.
+% Each time you run tbUseProject('Kaiser_2024_Psychophysiology'), ToolboxToolbox will
+% execute your local copy of this file to do setup for Kaiser_2024_Psychophysiology.
 %
 % You should edit your local copy with values that are correct for your
 % local machine, for example the output directory location.
 %
 
 
-projectName = 'Kaiser_2023_Psychophysiology';
+projectName = 'Kaiser_2024_Psychophysiology';
 
 %% Delete any old prefs
 if (ispref(projectName))
@@ -51,11 +51,11 @@ end
 % Path to data and analysis directories
 switch userName
     case 'aguirre'
-        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/xCompleted/2023/Kaiser_2023_psychometricBlink/Figures/matlabFigures');
+        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/xCompleted/2023/Kaiser_2024_psychometricBlink/Figures/matlabFigures');
         analysisDir = fullfile(dropboxBaseDir,'BLNK_analysis','noise_cancellation');
         dataDir = fullfile(dropboxBaseDir,'BLNK_data','noise_cancellation');
     otherwise
-        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/xCompleted/2023/Kaiser_2023_psychometricBlink/Figures/matlabFigures');
+        plotSaveDir = fullfile(dropboxBaseDir,'_Papers/xCompleted/2023/Kaiser_2024_psychometricBlink/Figures/matlabFigures');
         analysisDir = fullfile(dropboxBaseDir,'BLNK_analysis','expt01_summer2023');
         dataDir = fullfile(dropboxBaseDir,'BLNK_data','expt01_summer2023');
 end
